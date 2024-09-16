@@ -9,7 +9,7 @@
 
 ![visitors](https://visitor-badge.laobi.icu/badge?page_id=jingyaogong/minimind-v)
 [![GitHub Repo stars](https://img.shields.io/github/stars/jingyaogong/minimind-v?style=social)](https://github.com/jingyaogong/minimind-v/stargazers)
-[![GitHub Code License](https://img.shields.io/github/license/jingyaogong/minimind-v)](LICENSE)
+[![GitHub Code License](https://img.shields.io/github/license/jingyaogong/minimind-v?v=1)](LICENSE)
 [![GitHub last commit](https://img.shields.io/github/last-commit/jingyaogong/minimind-v)](https://github.com/jingyaogong/minimind-v/commits/master)
 [![GitHub pull request](https://img.shields.io/badge/PRs-welcome-blue)](https://github.com/jingyaogong/minimind-v/pulls)
 
