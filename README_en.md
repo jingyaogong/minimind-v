@@ -15,22 +15,23 @@
 
 </div>
 
+
 <div align="center">
-  <h3>"大道至简"</h3>
+  <h3>"The Greatest Path is the Simplest"</h3>
 </div>
 
 <div align="center">
 
-中文 | [English](./README_en.md)
+[中文](./README.md) | English
 
 </div>
 
 
-👉从头训练一个小参数量的视觉多模态VLM
+👉Train a visual multimodal VLM with a small number of parameters from scratch
 
-🎉预计2024年内开源，正在马不停蹄的coding和training！
-
+🎉Expected to be open sourced within 2024, we are working tirelessly on coding and training!
 
 # License
 
 This repository is licensed under the [Apache-2.0 License](LICENSE).
+
