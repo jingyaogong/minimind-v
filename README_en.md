@@ -207,11 +207,15 @@ At this point, it's interesting to ponder two questions: What is a **L**arge **L
   Machines do not differentiate the modality source of these signals but rather process and analyze the information content carried by these sequences.
 
 ---
+
 I personally believe that **G**enerative **P**retrained **T**ransformer (GPT) is a more fitting term than **L**arge **L**anguage **M**odel (LLM),
 and thus I prefer to use "GPT" to represent LLM/VLM/GPT-like architectures, rather than to piggyback on OpenAI's popularity.
+
 ---
+
 In summary, we can encapsulate what GPT does in one sentence:
 GPT models predict the next, and the next, and the next token... until the model outputs an end token; here, the "token" does not necessarily have to be text!
+
 ---
 
 * For LLM models, if understanding "images" is required, we can treat "images" as a special kind of "foreign language" never seen before, translating them through a "foreign dictionary" into a special language input for the LLM.
