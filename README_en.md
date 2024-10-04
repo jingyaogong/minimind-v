@@ -483,12 +483,22 @@ Based on the provided table data, the performance of the four models can be summ
     - **Comprehensive and specific descriptions**: This model's descriptions are the most detailed and precise among the four. For instance, when describing the bear image, it mentions "standing in an open field of grass, surrounded by trees and bushes, with a backpack," capturing multiple elements of the image.
     - **Stronger comprehension ability**: This model can identify the scene and context of the image, providing reasonable interpretations and speculations. For example, describing a "family gathering" or "celebration" gives the image a more contextual connection.
 
-### Summary:
+### GPT=4o Summary:
 
 - **512_pretrain** performs the worst, with simple and inaccurate descriptions.
 - **512_sft** has improved detail in descriptions but occasionally includes irrelevant information.
 - **768_pretrain** has poor coherence in information, yet provides basic descriptions in some aspects.
 - **768_sft** performs the best, offering detailed, accurate descriptions, and is able to make good context-based inferences.
+
+### Personal Summary:
+
+- Visual signals are a special kind of foreign language for LLMs, so the ability to "learn foreign languages" largely depends on the capabilities of the LLM.
+- The stronger the performance of the LLM, the stronger the corresponding VLM will be, and the performance gain will be significant.
+- Areas for improvement:
+  - Simpler projection methods for cross-modal feature alignment result in greater performance loss compared to Cross-Attention.
+  - Larger and more powerful large-series Clip models can be tried, using more fine-grained token representations for image features, which are currently very rough.
+  - The resolution is not high, theoretically only 224*224 (minimind-v dataset is set to 128*128 to save space).
+  - ...
 
 ---
 
