@@ -39,7 +39,7 @@
 
 
 
-![](./images/modelscope-demo.gif)
+![modelscope](./images/modelscope-demo.gif)
 
 <div align="center">
 
@@ -98,35 +98,32 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
 
 # 📌 Quick Test
 
-1. Clone the project
+* 0. Clone the project
+    ```bash
+    git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
+    ```
 
-```bash
-# step 1
-git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
-```
+* 1. Install the environment
+  ```bash
+  pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+  ```
+  
+* 2. Download the pre-trained model weights to the project root directory `minimind-v-v1`
+    ```bash
+    git clone https://huggingface.co/jingyaogong/minimind-v-v1
+    ```
 
-2. Download the pre-trained model weight files to the root directory `minimind-v-v1` of the project
+* 3. Download the pre-trained `clip-vit-base-patch32` model to the `model/clip_model` directory:
+    ```bash
+    cd model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
+    ```
 
-```bash
-# step 2
-git clone https://huggingface.co/jingyaogong/minimind-v-v1
-```
+* 4. Start the chat web server for testing conversations
+    ```bash
+    python web_server.py
+    ```
 
-3. Download the pre-trained `clip-vit-base-patch32` model into the `model/clip_model` directory:
-
-```bash
-# step 3
-cd model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
-```
-
-4. Start the chat web page to test the conversation
-
-```bash
-# step 4
-python web_server.py
-```
-
-[web_server](images/web_server.gif)
+![web_server](images/web_server.gif)
 
 # 📌 Quick Start Train
 
@@ -140,7 +137,7 @@ python web_server.py
     ```
 * 2. If you want to train it yourself
 
-    * 2.1 Download all contents of the [dataset](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) to the `./dataset` directory, and unzip `pretrain_images.zip` and `sft_images.zip`
+    * 2.1 Download all contents of the dataset ([Baidu Netdisk](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset)) to the `./dataset` directory, and unzip `pretrain_images.zip` and `sft_images.zip`
     * 2.2 Adjust the model parameters in `./model/LMConfig.py`
       > Only need to adjust the dim and n_layers parameters, which are `(512+8)` or `(768+16)`, corresponding to `minimind-v-v1-small` and `minimind-v-v1`
     * 2.3 Download the [pre-trained weight file](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) of the MiniMind language model and place it in the `./out/` directory, named `*_llm.pth`
@@ -186,8 +183,8 @@ The base language model MiniMind (LLM) for MiniMind-V (VLM) comes from the twin 
 > PS: Even if you do not wish to delve into the details of MiniMind (LLM), you can directly refer to Quick Test and Quick Start to quickly test or train MiniMind-V. This will not be significantly affected.
 
 The structure of MiniMind-V remains almost unchanged, with only two additional sub-modules added: Visual Encoder and feature projection, as well as a multimodal fusion branch, to support input from multiple modalities:
-[LLM-structure](./images/VLM-structure.png)
-[LLM-structure](./images/VLM-structure-moe.png)
+![LLM-structure](./images/VLM-structure.png)
+![LLM-structure](./images/VLM-structure-moe.png)
 
 At this point, it's interesting to ponder two questions: What is a **L**arge **L**anguage **M**odel (LLM)? And what is a multimodal model?
 
@@ -246,7 +243,7 @@ After obtaining the image encoder features, on one hand, it is necessary to alig
 on the other hand, the image features must be mapped to the same space as the text embeddings, i.e., the text tokens and the native visual tokens need to be aligned and cannot be treated equally; this can be called cross-modal feature alignment.
 [LlaVA-1](https://arxiv.org/pdf/2304.08485) accomplished this with a simple unbiased linear transformation, and the results were excellent; MiniMind-V does the same.
 
-[llava-structure](./images/llava-structure.png)
+![llava-structure](./images/llava-structure.png)
 
 With this, the internal structural changes of MiniMind-V have been presented.
 
@@ -274,7 +271,7 @@ Therefore, the prompt for minimind-v:
 After computing the embedding and projection, and replacing the image part tokens, 
 the entire computation process to output is no different from the LLM part.
 
-[input](./images/minimind-v-input.png)
+![input](./images/minimind-v-input.png)
 
 <u>With this, all the details of MiniMind-V have been presented.</u>
 
@@ -343,13 +340,13 @@ The instruction fine-tuning learns the real Q&A format for asking questions abou
 During training, the visual encoder, which is the CLIP model, is frozen, and only the Projection and LLM parts are fine-tuned.
 
 > Pretrain 512+8 Model (Training Time and Loss Reference Chart)
-[input](./images/1-pretrain-512.png)
+![input](./images/1-pretrain-512.png)
 > Pretrain 768+16 Model (Training Time and Loss Reference Chart)
-[input](./images/1-pretrain-768.png)
+![input](./images/1-pretrain-768.png)
 > SFT 512+8 Model (Training Time and Loss Reference Chart)
-[input](./images/2-sft-512.png)
+![input](./images/2-sft-512.png)
 > SFT 768+16 Model (Training Time and Loss Reference Chart)
-[input](./images/2-sft-768.png)
+![input](./images/2-sft-768.png)
 
 ## Trained Model Weights
 
@@ -459,8 +456,8 @@ Download link: [HuggingFace](https://huggingface.co/collections/jingyaogong/mini
 python web_server.py
 ```
 
-[web_server1](./images/web_server1.png)
-[web_server2](./images/web_server2.png)
+![web_server1](./images/web_server1.png)
+![web_server2](./images/web_server2.png)
 
 ### Summary of Effects
 

@@ -129,15 +129,15 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 # 📌 Quick Start Train
 
-* 0、环境安装
+* 0.环境安装
   ```bash
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
-* 1、克隆项目代码
+* 1.克隆项目代码
     ```text
     git clone https://github.com/jingyaogong/minimind-v
     ```
-* 2、如果需要自己训练
+* 2.如果需要自己训练
 
     * 2.1 下载数据集 ([百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset))文件到`./dataset`
       目录下，并解压`pretrain_images.zip` 和 `sft_images.zip`
@@ -148,7 +148,7 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
     * 2.4 `python 1-pretrain_vlm.py` 执行预训练，得到 `*_vlm_pretrain.pth` 作为预训练的输出权重
     * 2.5 `python 2-sft_vlm.py` 执行指令微调，得到 `*_vlm_sft.pth` 作为指令微调的输出权重
 
-* 3、测试自己训练的模型推理效果
+* 3.测试自己训练的模型推理效果
     * 确保需要使用的，训练完成的参数权重`*.pth`文件位于`./out/`目录下
     * 也可以直接去[训练完成的模型权重](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)
       下载使用我训练好的`*.pth`权重文件
