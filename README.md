@@ -133,22 +133,29 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
   ```bash
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
+
 * 1.克隆项目代码
     ```text
     git clone https://github.com/jingyaogong/minimind-v
     ```
-* 2.如果需要自己训练
 
-    * 2.1 下载数据集 ([百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset))文件到`./dataset`
+* 2.下载 `clip-vit-base-patch32` 模型，放到 `./model/clip_model` 目录下：
+    ```bash
+    cd ./model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
+    ```
+
+* 3.如果需要自己训练
+
+    * 3.1 下载数据集 ([百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset))文件到`./dataset`
       目录下，并解压`pretrain_images.zip` 和 `sft_images.zip`
-    * 2.2 在`./model/LMConfig.py` 中调整model的参数配置
+    * 3.2 在`./model/LMConfig.py` 中调整model的参数配置
       > 这里仅需调整dim和n_layers参数，分别是`(512+8)`或`(768+16)`，对应于`minimind-v-v1-small`和`minimind-v-v1`
-    * 2.3 下载MiniMind语言模型的[预训练权重文件](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)
+    * 3.3 下载MiniMind语言模型的[预训练权重文件](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)
       ，放到到`./out/`目录下，命名为`*_llm.pth`
-    * 2.4 `python 1-pretrain_vlm.py` 执行预训练，得到 `*_vlm_pretrain.pth` 作为预训练的输出权重
-    * 2.5 `python 2-sft_vlm.py` 执行指令微调，得到 `*_vlm_sft.pth` 作为指令微调的输出权重
+    * 3.4 `python 1-pretrain_vlm.py` 执行预训练，得到 `*_vlm_pretrain.pth` 作为预训练的输出权重
+    * 3.5 `python 2-sft_vlm.py` 执行指令微调，得到 `*_vlm_sft.pth` 作为指令微调的输出权重
 
-* 3.测试自己训练的模型推理效果
+* 4.测试自己训练的模型推理效果
     * 确保需要使用的，训练完成的参数权重`*.pth`文件位于`./out/`目录下
     * 也可以直接去[训练完成的模型权重](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)
       下载使用我训练好的`*.pth`权重文件
