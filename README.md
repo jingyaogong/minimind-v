@@ -98,35 +98,32 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 * CUDA == 12.2
 * [requirements.txt](./requirements.txt)
 
-# 📌 Quick Test
+# 📌 Quick Start Test
 
-1.克隆项目
+* 0.克隆项目
+    ```bash
+    git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
+    ```
 
-```bash
-# step 1
-git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
-```
+* 1.环境安装
+  ```bash
+  pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+  ```
+  
+* 2.下载预训练的模型权重文件到项目根目录 `minimind-v-v1`
+    ```bash
+    git clone https://huggingface.co/jingyaogong/minimind-v-v1
+    ```
 
-2.下载预训练的模型权重文件到项目根目录 `minimind-v-v1`
+* 3.下载预训练的`clip-vit-base-patch32` 模型，在 `model/clip_model` 目录下：
+    ```bash
+    cd model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
+    ```
 
-```bash
-# step 2
-git clone https://huggingface.co/jingyaogong/minimind-v-v1
-```
-
-3.下载预训练的`clip-vit-base-patch32` 模型，在 `model/clip_model` 目录下：
-
-```bash
-# step 3
-cd model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
-```
-
-4.启动聊天网页测试对话
-
-```bash
-# step 4 
-python web_server.py
-```
+* 4.启动聊天网页测试对话
+    ```bash
+    python web_server.py
+    ```
 
 ![web_server](images/web_server.gif)
 
@@ -142,8 +139,8 @@ python web_server.py
     ```
 * 2、如果需要自己训练
 
-    * 2.1 下载[数据集](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666)的所有内容到`./dataset`
-      目录下，解压`pretrain_images.zip` 和 `sft_images.zip`
+    * 2.1 下载数据集 ([百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset))文件到`./dataset`
+      目录下，并解压`pretrain_images.zip` 和 `sft_images.zip`
     * 2.2 在`./model/LMConfig.py` 中调整model的参数配置
       > 这里仅需调整dim和n_layers参数，分别是`(512+8)`或`(768+16)`，对应于`minimind-v-v1-small`和`minimind-v-v1`
     * 2.3 下载MiniMind语言模型的[预训练权重文件](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)
