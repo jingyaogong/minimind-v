@@ -131,20 +131,27 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
   ```bash
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
+
 * 1. Clone the project code
     ```text
     git clone https://github.com/jingyaogong/minimind-v
     ```
-* 2. If you want to train it yourself
 
-    * 2.1 Download all contents of the dataset ([Baidu Netdisk](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset)) to the `./dataset` directory, and unzip `pretrain_images.zip` and `sft_images.zip`
-    * 2.2 Adjust the model parameters in `./model/LMConfig.py`
+* 2. Download the `clip-vit-base-patch32` model and place it in the `./model/clip_model` directory:
+    ```bash
+    cd ./model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
+    ```
+  
+* 3. If you want to train it yourself
+
+    * 3.1 Download all contents of the dataset ([Baidu Netdisk](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset)) to the `./dataset` directory, and unzip `pretrain_images.zip` and `sft_images.zip`
+    * 3.2 Adjust the model parameters in `./model/LMConfig.py`
       > Only need to adjust the dim and n_layers parameters, which are `(512+8)` or `(768+16)`, corresponding to `minimind-v-v1-small` and `minimind-v-v1`
-    * 2.3 Download the [pre-trained weight file](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) of the MiniMind language model and place it in the `./out/` directory, named `*_llm.pth`
-    * 2.4 Execute `python 1-pretrain_vlm.py` for pre-training, obtaining `*_vlm_pretrain.pth` as the output weights
-    * 2.5 Execute `python 2-sft_vlm.py` for instruction fine-tuning, obtaining `*_vlm_sft.pth` as the output weights for fine-tuning
+    * 3.3 Download the [pre-trained weight file](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) of the MiniMind language model and place it in the `./out/` directory, named `*_llm.pth`
+    * 3.4 Execute `python 1-pretrain_vlm.py` for pre-training, obtaining `*_vlm_pretrain.pth` as the output weights
+    * 3.5 Execute `python 2-sft_vlm.py` for instruction fine-tuning, obtaining `*_vlm_sft.pth` as the output weights for fine-tuning
 
-* 3. Test the inference effect of the self-trained model
+* 4. Test the inference effect of the self-trained model
     * Ensure that the used, completed training parameter weights `*.pth` files are located in the `./out/` directory
     * You can also directly download the [completed model weight files](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) and use the `*.pth` weight files I have trained
        ```text
