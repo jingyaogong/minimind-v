@@ -497,7 +497,7 @@ Based on the provided table data, the performance of the four models can be summ
 - Areas for improvement:
   - Simpler projection methods for cross-modal feature alignment result in greater performance loss compared to Cross-Attention.
   - Larger and more powerful large-series Clip models can be tried, using more fine-grained token representations for image features, which are currently very rough.
-  - The resolution is not high, theoretically only 224*224 (minimind-v dataset is set to 128*128 to save space).
+  - The resolution is not high, theoretically only 224×224 (minimind-v dataset is set to 128×128 to save space).
   - ...
 
 ---
