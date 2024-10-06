@@ -25,7 +25,7 @@ def init_model(lm_config):
 
     if model_from == 1:
         moe_path = '_moe' if lm_config.use_moe else ''
-        ckp = f'./out/{lm_config.dim}{moe_path}_vlm_pretrain.pth'
+        ckp = f'./out/{lm_config.dim}{moe_path}_vlm_sft.pth'
 
         model = Transformer(lm_config)
         state_dict = torch.load(ckp, map_location=device)

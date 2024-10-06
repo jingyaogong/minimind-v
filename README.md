@@ -101,6 +101,9 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 # 📌 Quick Start Test
 
+> BTW: 如果没有git-lfs，请先安装 `sudo apt-get update`, `sudo apt-get install git-lfs`
+
+
 * 0.克隆项目
     ```bash
     git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
@@ -130,6 +133,9 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 # 📌 Quick Start Train
 
+> BTW: 如果没有git-lfs，请先安装 `sudo apt-get update`, `sudo apt-get install git-lfs`
+
+
 * 0.克隆项目代码
     ```text
     git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
@@ -151,15 +157,13 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
       目录下，并解压`pretrain_images.zip` 和 `sft_images.zip`
     * 3.2 在`./model/LMConfig.py` 中调整model的参数配置
       > 这里仅需调整dim和n_layers参数，分别是`(512+8)`或`(768+16)`，对应于`minimind-v-v1-small`和`minimind-v-v1`
-    * 3.3 下载MiniMind语言模型的[预训练权重文件](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)
-      ，放到到`./out/`目录下，命名为`*_llm.pth`
+    * 3.3 下载minimind语言模型的[预训练权重](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)，放到`./out/`目录下，命名为`*_llm.pth`
     * 3.4 `python 1-pretrain_vlm.py` 执行预训练，得到 `*_vlm_pretrain.pth` 作为预训练的输出权重
     * 3.5 `python 2-sft_vlm.py` 执行指令微调，得到 `*_vlm_sft.pth` 作为指令微调的输出权重
 
 * 4.测试自己训练的模型推理效果
     * 确保需要使用的，训练完成的参数权重`*.pth`文件位于`./out/`目录下
-    * 也可以直接去[训练完成的模型权重](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)
-      下载使用我训练好的`*.pth`权重文件
+    * 也可以直接下载使用我已经训练好的 `*.pth` [权重文件](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)使用
        ```text
       minimind-v/out
       ├── 512_llm.pth

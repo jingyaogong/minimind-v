@@ -99,6 +99,9 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
 
 # 📌 Quick Start Test
 
+> BTW: If you don't have Git LFS installed, please install it first with `sudo apt-get update`, `sudo apt-get install git-lfs`.
+
+
 * 0. Clone the project
     ```bash
     git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
@@ -127,6 +130,8 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
 ![web_server](images/web_server.gif)
 
 # 📌 Quick Start Train
+
+> BTW: If you don't have Git LFS installed, please install it first with `sudo apt-get update`, `sudo apt-get install git-lfs`.
 
 * 0.Clone the project code
     ```text
