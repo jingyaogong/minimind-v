@@ -130,15 +130,15 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 # 📌 Quick Start Train
 
-* 0.环境安装
-  ```bash
-  pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-  ```
-
-* 1.克隆项目代码
+* 0.克隆项目代码
     ```text
     git clone https://github.com/jingyaogong/minimind-v
     ```
+
+* 1.环境安装
+  ```bash
+  pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+  ```
 
 * 2.下载 `clip-vit-base-patch32` 模型，放到 `./model/clip_model` 目录下：
     ```bash
