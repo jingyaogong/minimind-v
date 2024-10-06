@@ -130,7 +130,7 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
 
 * 0.Clone the project code
     ```text
-    git clone https://github.com/jingyaogong/minimind-v
+    git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
     ```
 
 * 1.Environment setup
