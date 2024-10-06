@@ -48,6 +48,8 @@ The demo has been deployed to ModelScope's creative space, where you can experie
 
 [ModelScope Online Experience](https://modelscope.cn/studios/gongjy/minimind-v)
 
+[🎉🎉BiliBili Video🎉🎉](https://www.bilibili.com/video/BV1Sh1vYBEzY)
+
 </div>
 
 # 📌 Introduction
