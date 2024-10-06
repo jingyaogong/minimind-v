@@ -46,6 +46,7 @@ Demo已部署至ModelScope创空间，可以在此网站上体验：
 
 [ModelScope在线体验](https://modelscope.cn/studios/gongjy/minimind-v)
 
+[🎉🎉BiliBili项目视频🎉🎉](https://www.bilibili.com/video/BV1Sh1vYBEzY)
 </div>
 
 
