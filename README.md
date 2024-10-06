@@ -132,7 +132,7 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 * 0.克隆项目代码
     ```text
-    git clone https://github.com/jingyaogong/minimind-v
+    git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
     ```
 
 * 1.环境安装
