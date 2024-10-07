@@ -147,12 +147,12 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
 
 * 2.Download the `clip-vit-base-patch32` model and place it in the `./model/clip_model` directory:
     ```bash
-    cd ./model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
+    cd ./model/clip_model & git clone https://huggingface.co/openai/clip-vit-base-patch32
     ```
   
 * 3.If you want to train it yourself
 
-    * 3.1 Download all contents of the dataset ([Baidu Netdisk](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset)) to the `./dataset` directory, and unzip `pretrain_images.zip` and `sft_images.zip`
+    * 3.1 Download all contents of the dataset ([Baidu Netdisk](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)) to the `./dataset` directory, and unzip `pretrain_images.zip` and `sft_images.zip`
     * 3.2 Adjust the model parameters in `./model/LMConfig.py`
       > Only need to adjust the dim and n_layers parameters, which are `(512+8)` or `(768+16)`, corresponding to `minimind-v-v1-small` and `minimind-v-v1`
     * 3.3 Download the [pre-trained weight file](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) of the MiniMind language model and place it in the `./out/` directory, named `*_llm.pth`
