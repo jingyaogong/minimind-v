@@ -113,6 +113,15 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
   ```bash
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
+  ```python
+  # Test if torch can use CUDA
+  import torch
+  print(torch.cuda.is_available())
+  ```
+
+  > If it is not available, please go to [torch_stable](https://download.pytorch.org/whl/torch_stable.html)
+  to download the whl file for installation. Refer to [this link](https://blog.csdn.net/weixin_45456738/article/details/141029610?ops_request_misc=&request_id=&biz_id=102&utm_term=安装torch&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-2-141029610.nonecase&spm=1018.2226.3001.4187)
+  
   
 * 2. Download the pre-trained model weights to the project root directory `minimind-v-v1`
     ```bash
