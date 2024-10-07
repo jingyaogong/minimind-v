@@ -149,7 +149,7 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 * 2.下载 `clip-vit-base-patch32` 模型，放到 `./model/clip_model` 目录下：
     ```bash
-    cd ./model/clip_model & git clone https://huggingface.co/openai/clip-vit-base-patch32
+    cd ./model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
     ```
 
 * 3.如果需要自己训练

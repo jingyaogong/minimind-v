@@ -147,7 +147,7 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
 
 * 2.Download the `clip-vit-base-patch32` model and place it in the `./model/clip_model` directory:
     ```bash
-    cd ./model/clip_model & git clone https://huggingface.co/openai/clip-vit-base-patch32
+    cd ./model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
     ```
   
 * 3.If you want to train it yourself
