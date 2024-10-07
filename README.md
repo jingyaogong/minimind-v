@@ -149,12 +149,12 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 * 2.下载 `clip-vit-base-patch32` 模型，放到 `./model/clip_model` 目录下：
     ```bash
-    cd ./model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
+    cd ./model/clip_model & git clone https://huggingface.co/openai/clip-vit-base-patch32
     ```
 
 * 3.如果需要自己训练
 
-    * 3.1 下载数据集 ([百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset))文件到`./dataset`
+    * 3.1 下载数据集 ([百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))文件到`./dataset`
       目录下，并解压`pretrain_images.zip` 和 `sft_images.zip`
     * 3.2 在`./model/LMConfig.py` 中调整model的参数配置
       > 这里仅需调整dim和n_layers参数，分别是`(512+8)`或`(768+16)`，对应于`minimind-v-v1-small`和`minimind-v-v1`
