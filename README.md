@@ -36,8 +36,6 @@
 
   > 为防止误读，「最快3小时」是指您需要具备＞本人硬件配置的机器，具体规格的详细信息将在下文提供。
 
-
-
 ![](./images/modelscope-demo.gif)
 
 <div align="center">
@@ -48,7 +46,6 @@ Demo已部署至ModelScope创空间，可以在此网站上体验：
 
 [🎉🎉BiliBili项目视频🎉🎉](https://www.bilibili.com/video/BV1Sh1vYBEzY)
 </div>
-
 
 # 📌 Introduction
 
@@ -104,7 +101,6 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 > BTW: 如果没有git-lfs，请先安装 `sudo apt-get update`, `sudo apt-get install git-lfs`
 
-
 * 0.克隆项目
     ```bash
     git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
@@ -115,6 +111,16 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
   
+  ```python
+  # 测试torch是否可用cuda
+  import torch
+  print(torch.cuda.is_available())
+  ```
+
+  > 如果不可用，请自行去[torch_stable](https://download.pytorch.org/whl/torch_stable.html)
+  下载whl文件安装。参考[链接](https://blog.csdn.net/weixin_45456738/article/details/141029610?ops_request_misc=&request_id=&biz_id=102&utm_term=%E5%AE%89%E8%A3%85torch&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-2-141029610.nonecase&spm=1018.2226.3001.4187)
+
+
 * 2.下载预训练的模型权重文件到项目根目录 `minimind-v-v1`
     ```bash
     git clone https://huggingface.co/jingyaogong/minimind-v-v1
@@ -136,7 +142,6 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 > BTW: 如果没有git-lfs，请先安装 `sudo apt-get update`, `sudo apt-get install git-lfs`
 
-
 * 0.克隆项目代码
     ```text
     git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
@@ -147,6 +152,15 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
 
+  ```python
+  # 测试torch是否可用cuda
+  import torch
+  print(torch.cuda.is_available())
+  ```
+
+  > 如果不可用，请自行去[torch_stable](https://download.pytorch.org/whl/torch_stable.html)
+  下载whl文件安装。参考[链接](https://blog.csdn.net/weixin_45456738/article/details/141029610?ops_request_misc=&request_id=&biz_id=102&utm_term=%E5%AE%89%E8%A3%85torch&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-2-141029610.nonecase&spm=1018.2226.3001.4187)
+
 * 2.下载 `clip-vit-base-patch32` 模型，放到 `./model/clip_model` 目录下：
     ```bash
     cd ./model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
@@ -154,11 +168,13 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 
 * 3.如果需要自己训练
 
-    * 3.1 下载数据集 ([百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))文件到`./dataset`
+    * 3.1 下载数据集 ([百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666)
+      or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))文件到`./dataset`
       目录下，并解压`pretrain_images.zip` 和 `sft_images.zip`
     * 3.2 在`./model/LMConfig.py` 中调整model的参数配置
       > 这里仅需调整dim和n_layers参数，分别是`(512+8)`或`(768+16)`，对应于`minimind-v-v1-small`和`minimind-v-v1`
-    * 3.3 下载minimind语言模型的[预训练权重](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)，放到`./out/`目录下，命名为`*_llm.pth`
+    * 3.3 下载minimind语言模型的[预训练权重](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)，放到`./out/`
+      目录下，命名为`*_llm.pth`
     * 3.4 `python 1-pretrain_vlm.py` 执行预训练，得到 `*_vlm_pretrain.pth` 作为预训练的输出权重
     * 3.5 `python 2-sft_vlm.py` 执行指令微调，得到 `*_vlm_sft.pth` 作为指令微调的输出权重
 
@@ -519,10 +535,10 @@ python web_server.py
 - 视觉信号对于LLM是一种特殊的外语，因此“学习外语”的能力高低，很大程度上取决于LLM的能力。
 - LLM性能越强，对应的VLM必然越强，且效果增益很明显。
 - 值得改进的方面：
-  - 更简单的Projection的跨模态特征对齐方式，相较于Cross-Attention会带来更大的性能损失。
-  - Clip模型可以尝试更大性能更强的large系列，用更具细粒度的token表征图像特征，目前仍非常粗糙。
-  - 分辨率不高，理论上只有224×224（minimind-v数据集为节省空间，仅设定为128×128）。
-  - ...
+    - 更简单的Projection的跨模态特征对齐方式，相较于Cross-Attention会带来更大的性能损失。
+    - Clip模型可以尝试更大性能更强的large系列，用更具细粒度的token表征图像特征，目前仍非常粗糙。
+    - 分辨率不高，理论上只有224×224（minimind-v数据集为节省空间，仅设定为128×128）。
+    - ...
 
 ---
 
