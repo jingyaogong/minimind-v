@@ -110,8 +110,8 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
   ```bash
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
-  
-  ```python
+
+  ```text
   # 测试torch是否可用cuda
   import torch
   print(torch.cuda.is_available())
@@ -152,7 +152,7 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
 
-  ```python
+  ```text
   # 测试torch是否可用cuda
   import torch
   print(torch.cuda.is_available())
@@ -173,7 +173,8 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
       目录下，并解压`pretrain_images.zip` 和 `sft_images.zip`
     * 3.2 在`./model/LMConfig.py` 中调整model的参数配置
       > 这里仅需调整dim和n_layers参数，分别是`(512+8)`或`(768+16)`，对应于`minimind-v-v1-small`和`minimind-v-v1`
-    * 3.3 下载minimind语言模型的[预训练权重](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)，放到`./out/`
+    * 3.3 下载minimind语言模型的预训练权重([百度网盘](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666)
+      or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset/tree/main/out))，放到`./out/`
       目录下，命名为`*_llm.pth`
     * 3.4 `python 1-pretrain_vlm.py` 执行预训练，得到 `*_vlm_pretrain.pth` 作为预训练的输出权重
     * 3.5 `python 2-sft_vlm.py` 执行指令微调，得到 `*_vlm_sft.pth` 作为指令微调的输出权重

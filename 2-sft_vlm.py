@@ -122,22 +122,9 @@ def init_model(lm_config):
         if k.startswith(unwanted_prefix):
             state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
 
-    for k, v in list(state_dict.items()):
-        if 'mask' in k:
-            del state_dict[k]
-
     # 加载到模型中
     model.load_state_dict(state_dict, strict=False)
     model = model.to(args.device)
-
-    # # 第一阶段冻结llm，只学习vision_proj层
-    # for name, param in model.named_parameters():
-    #     # 如果参数名不包含'vision_proj'，则冻结该参数
-    #     if 'vision_proj' not in name:
-    #         param.requires_grad_(False)
-    #     else:
-    #         # 确保'vision_proj'中的参数可以更新
-    #         param.requires_grad_(True)
 
     print(f'模型可学习参数: {count_parameters(model) / 1e6} 百万 = {count_parameters(model) / 1e9} B (Billion)')
 
