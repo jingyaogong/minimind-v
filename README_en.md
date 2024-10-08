@@ -113,7 +113,7 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
   ```bash
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
-  ```python
+  ```text
   # Test if torch can use CUDA
   import torch
   print(torch.cuda.is_available())
@@ -153,7 +153,16 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
   ```bash
   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
   ```
+  ```text
+  # Test if torch can use CUDA
+  import torch
+  print(torch.cuda.is_available())
+  ```
 
+  > If it is not available, please go to [torch_stable](https://download.pytorch.org/whl/torch_stable.html)
+  to download the whl file for installation. Refer to [this link](https://blog.csdn.net/weixin_45456738/article/details/141029610?ops_request_misc=&request_id=&biz_id=102&utm_term=安装torch&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-2-141029610.nonecase&spm=1018.2226.3001.4187)
+  
+  
 * 2.Download the `clip-vit-base-patch32` model and place it in the `./model/clip_model` directory:
     ```bash
     cd ./model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
@@ -164,7 +173,7 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
     * 3.1 Download all contents of the dataset ([Baidu Netdisk](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)) to the `./dataset` directory, and unzip `pretrain_images.zip` and `sft_images.zip`
     * 3.2 Adjust the model parameters in `./model/LMConfig.py`
       > Only need to adjust the dim and n_layers parameters, which are `(512+8)` or `(768+16)`, corresponding to `minimind-v-v1-small` and `minimind-v-v1`
-    * 3.3 Download the [pre-trained weight file](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) of the MiniMind language model and place it in the `./out/` directory, named `*_llm.pth`
+    * 3.3 Download the pre-trained weight file ([Baidu Netdisk](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset/tree/main/out)) of the MiniMind language model and place it in the `./out/` directory, named `*_llm.pth`
     * 3.4 Execute `python 1-pretrain_vlm.py` for pre-training, obtaining `*_vlm_pretrain.pth` as the output weights
     * 3.5 Execute `python 2-sft_vlm.py` for instruction fine-tuning, obtaining `*_vlm_sft.pth` as the output weights for fine-tuning
 
