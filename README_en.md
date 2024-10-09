@@ -106,7 +106,8 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
 
 * 0. Clone the project
     ```bash
-    git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
+    git clone https://github.com/jingyaogong/minimind-v 
+    cd minimind-v
     ```
 
 * 1. Install the environment
@@ -130,7 +131,8 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
 
 * 3. Download the pre-trained `clip-vit-base-patch32` model to the `model/clip_model` directory:
     ```bash
-    cd model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
+    cd model/clip_model 
+    git clone https://hf-mirror.com/openai/clip-vit-base-patch32
     ```
 
 * 4. Start the chat web server for testing conversations
