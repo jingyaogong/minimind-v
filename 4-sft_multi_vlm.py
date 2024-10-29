@@ -237,7 +237,7 @@ if __name__ == "__main__":
 
     if ddp:
         model._ddp_params_and_buffers_to_ignore = {"pos_cis"}
-        model = DistributedDataParallel(model, device_ids=[ddp_local_rank], find_unused_parameters=True)
+        model = DistributedDataParallel(model, device_ids=[ddp_local_rank])
 
     iter_per_epoch = len(train_loader)
     for epoch in range(args.epochs):

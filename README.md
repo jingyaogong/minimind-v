@@ -321,7 +321,7 @@ minimind-v使用50个字符组成的 `<<<...>>>` 占位符代替图像，
 
 ![input](./images/minimind-v-input.png)
 
-多图实现方法就是通过注入多个\<image\>图像占位符进行实现。
+多图实现方法就是通过注入多个\<image\>图像占位符进行实现，不需要修改任何框架。
 
 >  ps: 唯一值得注意的点是，如果在训练过程中存在不同conversations插入图片数量不同的情况，需要利用空特征将较短的特征进行填充（对应[dataset的第267行](./model/dataset.py)），以保证能够在同样大小下被dataloader读取。
 > pps: 在prompt中不需要如此做，仍旧是根据插入图像的数量来进行占位符的注入。因此，最终输入给LLM的input feature不会受填充特征的影响。
@@ -395,6 +395,23 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
   }
 ```
 
+```json
+{
+    "id": "000000013633",
+    "image": "27266.jpg, 27267.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n<image>\nName all the differences between these two birds."
+      },
+      {
+        "from": "gpt",
+        "value": "animal1 is brown with white tuft while animal2 is white with dark brown wings"
+      }
+    ]
+  }
+```
+
 注：
 + 对于指令微调，仅保留了一轮对话，训练单轮对话模型，防止小模型性能被长文本拉低。
 + 多图数据集规模相对较小且为英文对话，数据集仅包含两图对比的场景，因此微调效果有限，这里只提供一种参考思路。
@@ -406,6 +423,8 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
 预训练从595K条数据集中学习图片的通用知识，比如鹿是鹿，狗是狗。
 
 指令微调从230K条真实对话数据集中学习对图片提问的真实问答格式。
+
+多图微调提供两个数据集，长度分别为3.5k和13.6k的真实问答格式。
 
 `1-pretrain_vlm.py` 执行预训练，得到 `*_vlm_pretrain.pth` 作为预训练的输出权重。
 
@@ -442,6 +461,7 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
 
 ### 效果测试
 
+#### 单图对话
 <table>
   <thead>
     <tr>
@@ -522,6 +542,25 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
       <td>图片中,一只黑白的猫在岩石上散步。</td>
       <td>野外云层的豹在洞穴外的岩石上,在日出时</td>
       <td>该图片展示了一只小熊猫在岩石上散步的照片。</td>
+    </tr>
+  </tbody>
+</table>
+
+#### 多图对话（效果十分有限）
+
+<table>
+  <thead>
+    <tr>
+      <th>图片1</th>
+      <th>图片2</th>
+      <th>512_sft_multi</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="./dataset/eval_multi_images/bird//0.jpg" alt="a-bird.png" style="width: 200px;"></td>
+      <td><img src="./dataset/eval_multi_images/bird//1.jpg" alt="a-bird.png" style="width: 200px;"></td>
+      <td>animal1 has a brown and black head with a black and white striped head . animal2 has a black head with a white stripe on its wings .</td>
     </tr>
   </tbody>
 </table>

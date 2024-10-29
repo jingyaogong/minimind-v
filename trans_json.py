@@ -17,7 +17,7 @@ for item in data['data']:
     conversation = [
         {
             "from": "human",
-            "value": f"context: Source Image: {source_image} Target Image: {target_image} Instruction: {instruction}."
+            "value": f"<image>\n<image>\n{instruction}"
         },
         {
             "from": "gpt",
