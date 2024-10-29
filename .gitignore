@@ -1,2 +1,2 @@
 model/clip_model/clip-vit-base-patch32/
-out/
+out/*.pth
