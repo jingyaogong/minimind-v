@@ -89,10 +89,15 @@ if __name__ == "__main__":
 
     i = 0
     # 获取图像文件列表
-    image_dir = './dataset/eval_multi_images/'
+    # image_dir = './dataset/eval_multi_images/' # 对于图像转换数据集
+    image_dir = './dataset/eval_multi_images/bird/' # 对于鸟类数据集
     image_files = sorted(os.listdir(image_dir))
 
-    prompt = "context: Source Image: <image> Target Image: <image> Instruction: What is the correct image edit instruction that can transfrom the source image to target image?"
+    # 对于图像转换数据集
+    # prompt = "context: Source Image: <image> Target Image: <image> Instruction: What is the correct image edit instruction that can transfrom the source image to target image?"
+    
+    # 对于鸟类数据集
+    prompt = "<image>\n<image>\nName all the differences between these two birds."
 
     # 遍历图像文件
     image_encoders = []
