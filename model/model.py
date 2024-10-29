@@ -399,7 +399,10 @@ class Transformer(PreTrainedModel):
                             before = current_h[:start_idx, :]
                             after = current_h[end_idx + 1:, :]
                             # 拼接 before, vision_proj, after
-                            current_h = torch.cat((before, vision_proj[i][img_idx], after), dim=0)[:seqlen]
+                            if len(vision_proj.shape) == 4:
+                                current_h = torch.cat((before, vision_proj[i][img_idx], after), dim=0)[:seqlen]
+                            else:
+                                current_h = torch.cat((before, vision_proj[i], after), dim=0)[:seqlen]
                             img_idx += 1
                     new_h.append(current_h)
                 # 将所有拼接后的结果堆叠起来
@@ -440,7 +443,8 @@ class Transformer(PreTrainedModel):
             self.last_loss = None
 
         self.OUT.__setitem__('logits', logits)
-        self.OUT.__setitem__('last_loss', self.last_loss)
+        # self.OUT.__setitem__('last_loss', self.last_loss)
+        self.OUT.__setitem__('loss', self.last_loss)
         return self.OUT
 
     @torch.inference_mode()

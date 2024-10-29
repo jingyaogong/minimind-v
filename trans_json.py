@@ -7,37 +7,21 @@ with open('full.json', 'r') as f:
 # 创建新的格式
 new_data = []
 
-# 定义选择列表的翻译字典
-translation_dict = {
-    "True": "是的",
-    "False": "不是",
-    "painted": "涂鸦",
-    "ripe": "成熟"
-}
-
 for item in data['data']:
     sample_id = str(item['sample_id']).zfill(12)  # 格式化为12位数字
-    images = [f"<image>" for _ in item['task_instance']['images_path']]
-    
-    # 直接从task_instance中获取choice_list
-    choice_list = item['task_instance']['choice_list']
-    
-    # 判断是否需要翻译
-    if all(choice in translation_dict for choice in choice_list):
-        choice_list = [translation_dict[choice] for choice in choice_list]
-        response = translation_dict[item['response']]
-    else:
-        response = item['response']
-    
+    source_image = f"<image>"  # 源图像占位符
+    target_image = f"<image>"  # 目标图像占位符
+    instruction = data['metadata']['task_instruction'][item['task_instruction_id']]
+
     # 构造新的对话格式
     conversation = [
         {
             "from": "human",
-            "value": f"{''.join(images)}\n{data['metadata']['task_instruction'][item['task_instruction_id']]} 选择列表:  {', '.join(choice_list)}."
+            "value": f"context: Source Image: {source_image} Target Image: {target_image} Instruction: {instruction}."
         },
         {
             "from": "gpt",
-            "value": response
+            "value": item['response']
         }
     ]
     

@@ -197,7 +197,7 @@ class SFTDataset_multi(Dataset):
         self.vision_model, self.preprocess = vision_model
         self.padding = 0
         self.bos_id = self.tokenizer('<s>assistant').data['input_ids']
-        self.dataset_path = './dataset/sft2_images/'
+        self.dataset_path = './dataset/sft_multi_images/'
         self.image_special_token = image_special_token
 
     def __len__(self):
@@ -264,7 +264,7 @@ class SFTDataset_multi(Dataset):
             image_encoders.append(get_img_process(image, self.preprocess)['pixel_values'])
 
         # 确定目标形状
-        max_images = 4  # 根据你的需求设置 一次性最大输入几张图片
+        max_images = 2  # 根据你的需求设置 一次性最大输入几张图片
         target_shape = (max_images, 3, 224, 224)
 
         # 创建填充张量
