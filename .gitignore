@@ -4,4 +4,3 @@ full.json
 trans_json.py
 dataset/*
 !dataset/eval_images/
-!dataset/eval_multi_images/
