@@ -320,7 +320,6 @@ minimind-v使用50个字符组成的 `<<<...>>>` 占位符代替图像，
 
 ![input](./images/minimind-v-input.png)
 
-
 多图实现方法就是通过注入多个\<image\>图像占位符进行实现，不需要修改任何框架。
 
 >  ps: 唯一值得注意的点是，如果在训练过程中存在不同conversations插入图片数量不同的情况，需要利用空特征将较短的特征进行填充（对应[dataset的第267行](./model/dataset.py#267)），以保证能够在同样大小下被dataloader读取。
@@ -416,6 +415,10 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
 + 对于指令微调，仅保留了一轮对话，训练单轮对话模型，防止小模型性能被长文本拉低。
 + 多图数据集规模相对较小且为英文对话，数据集仅包含两图对比的场景，因此微调效果有限，这里只提供一种参考思路。
 
+
+注：对于指令微调，仅保留了一轮对话，训练单轮对话模型，防止小模型性能被长文本拉低。
+
+
 最终的数据集下载地址：[百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)
 
 多图对话数据集：[HuggingFace](https://hf-mirror.com/datasets/xinyanghuang/minimind-v_multi_image/tree/main)
@@ -462,6 +465,7 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
 ### 效果测试
 
 #### 单图对话
+>>>>>>> 2d946a4eb424ebcca09d0ba066a01f85bb3b81b6
 <table>
   <thead>
     <tr>
