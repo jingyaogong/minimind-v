@@ -97,9 +97,9 @@ def train_epoch(epoch, wandb):
         if (step + 1) % args.save_interval == 0 and (not ddp or dist.get_rank() == 0):
             model.eval()
             moe_path = '_moe' if lm_config.use_moe else ''
-            if args.multi:
+            if args.multi: # 多图训练权重保存
                 ckp = f'{args.save_dir}/{lm_config.dim}{moe_path}_vlm_sft_multi.pth'
-            else:
+            else: # 单图训练权重保存
                 ckp = f'{args.save_dir}/{lm_config.dim}{moe_path}_vlm_sft.pth'
 
             if isinstance(model, torch.nn.parallel.DistributedDataParallel):

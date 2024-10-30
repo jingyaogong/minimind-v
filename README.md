@@ -465,7 +465,6 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
 ### 效果测试
 
 #### 单图对话
->>>>>>> 2d946a4eb424ebcca09d0ba066a01f85bb3b81b6
 <table>
   <thead>
     <tr>
