@@ -2,7 +2,6 @@ model/clip_model/clip-vit-base-patch32/
 out/*.pth
 full.json
 trans_json.py
-dataset/sft_multi_images/
-dataset/
-!dataset/eval_images
-!dataset/eval_multi_images
+dataset/*
+!dataset/eval_images/
+!dataset/eval_multi_images/

@@ -85,8 +85,6 @@ if __name__ == "__main__":
 
     stream = True
 
-    # prompt = lm_config.image_special_token + '\n这个图片描述的是什么内容？'
-
     i = 0
     # 获取图像文件列表
     # image_dir = './dataset/eval_multi_images/' # 对于图像转换数据集

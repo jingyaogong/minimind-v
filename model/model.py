@@ -385,29 +385,26 @@ class Transformer(PreTrainedModel):
 
         # 如果此时有图像编码
         if image_encoders is not None:
-            vision_proj = self.vision_proj(image_encoders)  # torch.Size([32, 4, 50, 512])
-            if image_indices is not None:
-                # 创建一个新的张量来存储拼接后的结果
-                new_h = []
-
-                for i in range(h.size(0)):
-                    current_h = h[i]
-                    img_idx = 0
-                    for _, (batch_idx, start_idx, end_idx) in enumerate(image_indices):
-                        if batch_idx == i:
-                            # 插入vision_proj特征
-                            before = current_h[:start_idx, :]
-                            after = current_h[end_idx + 1:, :]
-                            # 拼接 before, vision_proj, after
-                            if len(vision_proj.shape) == 4:
-                                current_h = torch.cat((before, vision_proj[i][img_idx], after), dim=0)[:seqlen]
-                            else:
-                                current_h = torch.cat((before, vision_proj[i], after), dim=0)[:seqlen]
-                            img_idx += 1
-                    new_h.append(current_h)
-                # 将所有拼接后的结果堆叠起来
-                new_h = torch.stack(new_h, dim=0) # torch.Size([32, 511, 512])
-                return new_h
+                vision_proj = self.vision_proj(image_encoders)
+                vision_proj = vision_proj.unsqueeze(0) if len(vision_proj.shape) == 3 else vision_proj
+                if image_indices is not None:
+                    # 创建一个新的张量来存储拼接后的结果
+                    new_h = []
+                    for i in range(h.size(0)):
+                        # i即为current_batch_idx索引
+                        img_idx = 0
+                        for batch_idx, start_idx, end_idx in image_indices:
+                            if batch_idx == i:
+                                # 插入vision_proj特征
+                                before = h[i][:start_idx, :]
+                                after = h[i][end_idx + 1:, :]
+                                # 拼接 before, vision_proj, after
+                                h[i] = torch.cat((before, vision_proj[i][img_idx], after), dim=0)[:seqlen]
+                                img_idx += 1
+                        new_h.append(h[i])
+                    # 将所有拼接后的结果重新堆叠起来
+                    new_h = torch.stack(new_h, dim=0)  # torch.Size([32, 511, 512])
+                    return new_h
 
         return h
 
