@@ -323,7 +323,68 @@ minimind-v使用50个字符组成的 `<<<...>>>` 占位符代替图像，
 多图实现方法就是通过注入多个\<image\>图像占位符进行实现，不需要修改任何框架。
 
 >  ps: 唯一值得注意的点是，如果在训练过程中存在不同conversations插入图片数量不同的情况，需要利用空特征将较短的特征进行填充（对应[dataset的第267行](./model/dataset.py#267)），以保证能够在同样大小下被dataloader读取。
+
 > pps: 在prompt中不需要如此做，仍旧是根据插入图像的数量来进行占位符的注入。因此，最终输入给LLM的input feature不会受填充特征的影响。
+
+
+<details>
+<summary> 实现视频理解能力的思考 </summary>
+对于多模态大模型的视频理解能力，一个可行的思路是参考现有MiniCPM-V 2.6 进行视频理解的Python示例。
+主要思想是通过提取视频关键帧，而后进行多图推理。
+因此，如果希望在MiniMind-V中添加视频理解能力，可以在现有多图训练的基础上，参考
+此python脚本中对于关键帧的提取方法，而后加大训练文件中支持图片的数量。
+所支持的MAX_NUM_FRAMES越多，所消耗的显存越大。
+
+```python
+import torch
+from PIL import Image
+from transformers import AutoModel, AutoTokenizer
+from decord import VideoReader, cpu    # pip install decord
+
+model = AutoModel.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True,
+    attn_implementation='sdpa', torch_dtype=torch.bfloat16) # sdpa or flash_attention_2, no eager
+model = model.eval().cuda()
+tokenizer = AutoTokenizer.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True)
+
+MAX_NUM_FRAMES=64 # if cuda OOM set a smaller number
+
+def encode_video(video_path):
+    def uniform_sample(l, n):
+        gap = len(l) / n
+        idxs = [int(i * gap + gap / 2) for i in range(n)]
+        return [l[i] for i in idxs]
+
+    vr = VideoReader(video_path, ctx=cpu(0))
+    sample_fps = round(vr.get_avg_fps() / 1)  # FPS
+    frame_idx = [i for i in range(0, len(vr), sample_fps)]
+    if len(frame_idx) > MAX_NUM_FRAMES:
+        frame_idx = uniform_sample(frame_idx, MAX_NUM_FRAMES)
+    frames = vr.get_batch(frame_idx).asnumpy()
+    frames = [Image.fromarray(v.astype('uint8')) for v in frames]
+    print('num frames:', len(frames))
+    return frames
+
+video_path="video_test.mp4"
+frames = encode_video(video_path)
+question = "Describe the video"
+msgs = [
+    {'role': 'user', 'content': frames + [question]}, 
+]
+
+# Set decode params for video
+params = {}
+params["use_image_id"] = False
+params["max_slice_nums"] = 2 # 如果cuda OOM且视频分辨率大于448*448可设为1
+
+answer = model.chat(
+    image=None,
+    msgs=msgs,
+    tokenizer=tokenizer,
+    **params
+)
+print(answer)
+```
+</details>
 
 <u>至此，MiniMind-V的所有细节已经呈现完毕。</u>
 
