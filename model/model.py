@@ -372,30 +372,39 @@ class Transformer(PreTrainedModel):
         # 查找token中<image>片段的索引，为了替换做准备
         def find_indices(tokens, image_ids):
             image_ids_tensor = torch.tensor(image_ids).to(tokens.device)
-            return [
-                [i, i + len(image_ids) - 1]
-                for batch_idx in range(tokens.size(0))
-                for i in range(tokens.size(1) - len(image_ids) + 1)
-                if torch.equal(tokens[batch_idx, i:i + len(image_ids)], image_ids_tensor)
-            ] or None
+            indices = []
 
-        image_indices = find_indices(tokens, self.image_ids)
+            for batch_idx in range(tokens.size(0)):
+                for i in range(tokens.size(1) - len(image_ids) + 1):
+                    if torch.equal(tokens[batch_idx, i:i + len(image_ids)], image_ids_tensor):
+                        indices.append([batch_idx, i, i + len(image_ids) - 1])  # 返回batch_idx和开始结束索引
+
+            return indices if indices else None
+
+        image_indices = find_indices(tokens, self.image_ids) # [0, 4, 53], [0, 54, 103], [0, 104, 153], [0, 154, 203] or [1, 4, 53], [1, 54, 103]
 
         # 如果此时有图像编码
         if image_encoders is not None:
-            vision_proj = self.vision_proj(image_encoders)
-            if image_indices is not None:
-                # 创建一个新的张量来存储拼接后的结果
-                new_h = []
-                for i in range(h.size(0)):
-                    before = h[i, :image_indices[i][0], :]
-                    after = h[i, image_indices[i][1] + 1:, :]
-                    # 拼接 before, vision_proj, after
-                    new_h_i = torch.cat((before, vision_proj[i], after), dim=0)[:seqlen]
-                    new_h.append(new_h_i)
-                # 将所有拼接后的结果堆叠起来
-                new_h = torch.stack(new_h, dim=0)
-                return new_h
+                vision_proj = self.vision_proj(image_encoders)
+                vision_proj = vision_proj.unsqueeze(0) if len(vision_proj.shape) == 3 else vision_proj
+                if image_indices is not None:
+                    # 创建一个新的张量来存储拼接后的结果
+                    new_h = []
+                    for i in range(h.size(0)):
+                        # i即为current_batch_idx索引
+                        img_idx = 0
+                        for batch_idx, start_idx, end_idx in image_indices:
+                            if batch_idx == i:
+                                # 插入vision_proj特征
+                                before = h[i][:start_idx, :]
+                                after = h[i][end_idx + 1:, :]
+                                # 拼接 before, vision_proj, after
+                                h[i] = torch.cat((before, vision_proj[i][img_idx], after), dim=0)[:seqlen]
+                                img_idx += 1
+                        new_h.append(h[i])
+                    # 将所有拼接后的结果重新堆叠起来
+                    new_h = torch.stack(new_h, dim=0)  # torch.Size([32, 511, 512])
+                    return new_h
 
         return h
 
@@ -431,7 +440,8 @@ class Transformer(PreTrainedModel):
             self.last_loss = None
 
         self.OUT.__setitem__('logits', logits)
-        self.OUT.__setitem__('last_loss', self.last_loss)
+        # self.OUT.__setitem__('last_loss', self.last_loss)
+        self.OUT.__setitem__('loss', self.last_loss)
         return self.OUT
 
     @torch.inference_mode()

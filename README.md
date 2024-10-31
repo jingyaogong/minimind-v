@@ -180,6 +180,7 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
       目录下，命名为`*_llm.pth`
     * 3.4 `python 1-pretrain_vlm.py` 执行预训练，得到 `*_vlm_pretrain.pth` 作为预训练的输出权重
     * 3.5 `python 2-sft_vlm.py` 执行指令微调，得到 `*_vlm_sft.pth` 作为指令微调的输出权重
+    * 3.6 `python 2-sft_vlm.py --multi True` 在指令微调的基础上执行多图指令微调（效果仅参考），得到 `*_vlm_sft_multi.pth` 作为多图指令微调的输出权重，512+8 模型显存占用约为8198M
 
 * 4.测试自己训练的模型推理效果
     * 确保需要使用的，训练完成的参数权重`*.pth`文件位于`./out/`目录下
@@ -195,6 +196,7 @@ CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
       ```
     * `python 3-eval_chat.py`测试模型的对话效果，其中测试图片在`./dataset/eval_images`下，可自行更换
       ![eval_chat](images/3-eval_chat.png)
+    * `python 3-eval_chat.py`调整[multi](./3-eval_chat.py#L61)变量，可以测试模型的多图对话效果，其中测试图片在`./dataset/eval_multi_images`下，可自行更换（多图数据集规模相对较小且为英文对话，数据集仅包含两图对比的场景，因此微调效果有限）。
 
 🍭 【Tip】预训练和全参指令微调pretrain和sft均支持多卡加速
 
@@ -314,10 +316,75 @@ minimind-v使用50个字符组成的 `<<<...>>>` 占位符代替图像，
 <<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>\n这个图片描述的是什么内容？
 ```
 
-计算完embedding和projection，并对图像部分token替换后
-整个计算过程到输出则和LLM部分没有任何区别。
+计算完embedding和projection，并对图像部分token替换后整个计算过程到输出则和LLM部分没有任何区别。
 
 ![input](./images/minimind-v-input.png)
+
+多图实现方法就是通过注入多个\<image\>图像占位符进行实现，不需要修改任何框架。
+
+>  ps: 唯一值得注意的点是，如果在训练过程中存在不同conversations插入图片数量不同的情况，需要利用空特征将较短的特征进行填充（对应[dataset的第267行](./model/dataset.py#L267)），以保证能够在同样大小下被dataloader读取。
+
+> pps: 在prompt中不需要如此做，仍旧是根据插入图像的数量来进行占位符的注入。因此，最终输入给LLM的input feature不会受填充特征的影响。
+
+
+<details>
+<summary> 实现视频理解能力的思考 </summary>
+
+对于多模态大模型的视频理解能力，一个可行的思路是参考现有MiniCPM-V 2.6 进行视频理解的Python示例。
+主要思想是通过提取视频关键帧，而后进行多图推理。
+因此，如果希望在MiniMind-V中添加视频理解能力，可以在现有多图训练的基础上，参考此python脚本中对于关键帧的提取方法，而后加大训练文件中支持图片的数量。
+所支持的MAX_NUM_FRAMES越多，所消耗的显存越大。
+
+```python
+import torch
+from PIL import Image
+from transformers import AutoModel, AutoTokenizer
+from decord import VideoReader, cpu    # pip install decord
+
+model = AutoModel.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True,
+    attn_implementation='sdpa', torch_dtype=torch.bfloat16) # sdpa or flash_attention_2, no eager
+model = model.eval().cuda()
+tokenizer = AutoTokenizer.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True)
+
+MAX_NUM_FRAMES=64 # if cuda OOM set a smaller number
+
+def encode_video(video_path):
+    def uniform_sample(l, n):
+        gap = len(l) / n
+        idxs = [int(i * gap + gap / 2) for i in range(n)]
+        return [l[i] for i in idxs]
+
+    vr = VideoReader(video_path, ctx=cpu(0))
+    sample_fps = round(vr.get_avg_fps() / 1)  # FPS
+    frame_idx = [i for i in range(0, len(vr), sample_fps)]
+    if len(frame_idx) > MAX_NUM_FRAMES:
+        frame_idx = uniform_sample(frame_idx, MAX_NUM_FRAMES)
+    frames = vr.get_batch(frame_idx).asnumpy()
+    frames = [Image.fromarray(v.astype('uint8')) for v in frames]
+    print('num frames:', len(frames))
+    return frames
+
+video_path="video_test.mp4"
+frames = encode_video(video_path)
+question = "Describe the video"
+msgs = [
+    {'role': 'user', 'content': frames + [question]}, 
+]
+
+# Set decode params for video
+params = {}
+params["use_image_id"] = False
+params["max_slice_nums"] = 2 # 如果cuda OOM且视频分辨率大于448*448可设为1
+
+answer = model.chat(
+    image=None,
+    msgs=msgs,
+    tokenizer=tokenizer,
+    **params
+)
+print(answer)
+```
+</details>
 
 <u>至此，MiniMind-V的所有细节已经呈现完毕。</u>
 
@@ -369,15 +436,61 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
 }
 ```
 
+多图指令微调数据集格式：
+
+```json
+{
+    "id": "000000000000",
+    "image": "0.jpg, 1.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "context: Source Image: <image> Target Image: <image> Instruction: What is the correct image edit instruction that can transfrom the source image to target image?"
+      },
+      {
+        "from": "gpt",
+        "value": "take the people out of the back in the photo. Remove the two people behind the woman in the white dress and the man in the blue suit. remove people behind the couple in the centre"
+      }
+    ]
+  }
+```
+
+```json
+{
+    "id": "000000013633",
+    "image": "27266.jpg, 27267.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n<image>\nName all the differences between these two birds."
+      },
+      {
+        "from": "gpt",
+        "value": "animal1 is brown with white tuft while animal2 is white with dark brown wings"
+      }
+    ]
+  }
+```
+
+注：
++ 对于指令微调，仅保留了一轮对话，训练单轮对话模型，防止小模型性能被长文本拉低。
++ 多图数据集规模相对较小且为英文对话，数据集仅包含两图对比的场景，因此微调效果有限，这里只提供一种参考思路。
+
+
 注：对于指令微调，仅保留了一轮对话，训练单轮对话模型，防止小模型性能被长文本拉低。
 
+
 最终的数据集下载地址：[百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)
+
+多图对话数据集：[HuggingFace](https://hf-mirror.com/datasets/xinyanghuang/minimind-v_multi_image/tree/main)
 
 ## 训练
 
 预训练从595K条数据集中学习图片的通用知识，比如鹿是鹿，狗是狗。
 
 指令微调从230K条真实对话数据集中学习对图片提问的真实问答格式。
+
+多图微调提供两个数据集，图像转换数据集和鸟类对比数据集，长度分别为3.5k和13.6k的真实问答格式。
 
 `1-pretrain_vlm.py` 执行预训练，得到 `*_vlm_pretrain.pth` 作为预训练的输出权重。
 
@@ -412,6 +525,7 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
 
 ### 效果测试
 
+#### 单图对话
 <table>
   <thead>
     <tr>
@@ -492,6 +606,25 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
       <td>图片中,一只黑白的猫在岩石上散步。</td>
       <td>野外云层的豹在洞穴外的岩石上,在日出时</td>
       <td>该图片展示了一只小熊猫在岩石上散步的照片。</td>
+    </tr>
+  </tbody>
+</table>
+
+#### 多图对话（效果十分有限）
+
+<table>
+  <thead>
+    <tr>
+      <th>图片1</th>
+      <th>图片2</th>
+      <th>512_sft_multi</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="./dataset/eval_multi_images/bird/0.jpg" alt="a-bird.png" style="width: 200px;"></td>
+      <td><img src="./dataset/eval_multi_images/bird/1.jpg" alt="a-bird.png" style="width: 200px;"></td>
+      <td>animal1 has a brown and black head with a black and white striped head . animal2 has a black head with a white stripe on its wings .</td>
     </tr>
   </tbody>
 </table>

@@ -1,0 +1,8 @@
+model/clip_model/clip-vit-base-patch32/
+out/*.pth
+full.json
+trans_json.py
+dataset/*
+!dataset/eval_images/
+!dataset/eval_multi_images/
+minimind-v/model/__pycache__/*

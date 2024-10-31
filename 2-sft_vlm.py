@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 from transformers import AutoTokenizer, AutoModel
 from model.model import Transformer
 from model.LMConfig import LMConfig
-from model.dataset import SFTDataset
+from model.dataset import SFTDataset, SFTDataset_multi
 from model.vision_utils import get_vision_model, get_img_embedding
 
 warnings.filterwarnings('ignore')
@@ -97,7 +97,10 @@ def train_epoch(epoch, wandb):
         if (step + 1) % args.save_interval == 0 and (not ddp or dist.get_rank() == 0):
             model.eval()
             moe_path = '_moe' if lm_config.use_moe else ''
-            ckp = f'{args.save_dir}/{lm_config.dim}{moe_path}_vlm_sft.pth'
+            if args.multi: # 多图训练权重保存
+                ckp = f'{args.save_dir}/{lm_config.dim}{moe_path}_vlm_sft_multi.pth'
+            else: # 单图训练权重保存
+                ckp = f'{args.save_dir}/{lm_config.dim}{moe_path}_vlm_sft.pth'
 
             if isinstance(model, torch.nn.parallel.DistributedDataParallel):
                 state_dict = model.module.state_dict()
@@ -106,12 +109,29 @@ def train_epoch(epoch, wandb):
 
             torch.save(state_dict, ckp)
             model.train()
+    if args.save_last and (not ddp or dist.get_rank() == 0) and args.multi:
+        model.eval()
+        moe_path = '_moe' if lm_config.use_moe else ''
+        ckp = f'{args.save_dir}/{lm_config.dim}{moe_path}_vlm_sft_multi.pth'
+
+        if isinstance(model, torch.nn.parallel.DistributedDataParallel):
+            state_dict = model.module.state_dict()
+        else:
+            state_dict = model.state_dict()
+
+        torch.save(state_dict, ckp)
+        model.train()
 
 
 def init_model(lm_config):
     tokenizer = AutoTokenizer.from_pretrained('./model/minimind_tokenizer')
     moe_path = '_moe' if lm_config.use_moe else ''
-    ckp = f'./out/{lm_config.dim}{moe_path}_vlm_pretrain.pth'
+
+    # 多图推理建议在单图推理之后
+    if args.multi:
+        ckp = f'./out/{lm_config.dim}{moe_path}_vlm_sft.pth'
+    else:
+        ckp = f'./out/{lm_config.dim}{moe_path}_vlm_pretrain.pth'
 
     model = Transformer(lm_config)
     state_dict = torch.load(ckp, map_location=args.device)
@@ -159,6 +179,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=8, help="Number of workers for data loading")
     parser.add_argument("--data_path", type=str, default="./dataset/LLaVA-Instruct/llava_instruct_230k.json",
                         help="Path to training data")
+    parser.add_argument("--data_path_multi", type=str, default="./dataset/sft_multi_images/output.json",
+                        help="Path to multi images training data")
     parser.add_argument("--ddp", action="store_true", help="Use DistributedDataParallel")
     parser.add_argument("--accumulation_steps", type=int, default=1, help="Gradient accumulation steps")
     parser.add_argument("--grad_clip", type=float, default=1.0, help="Gradient clipping threshold")
@@ -166,6 +188,8 @@ if __name__ == "__main__":
     parser.add_argument("--log_interval", type=int, default=100, help="Logging interval")
     parser.add_argument("--save_interval", type=int, default=100, help="Model saving interval")
     parser.add_argument('--local_rank', type=int, default=-1, help='local rank for distributed training')
+    parser.add_argument('--multi', type=bool, default=False, help='multi-images training')
+    parser.add_argument('--save_last', type=bool, default=True, help='save last step model')
 
     args = parser.parse_args()
 
@@ -197,9 +221,15 @@ if __name__ == "__main__":
     model, tokenizer, (vision_model, preprocess) = init_model(lm_config)
 
     use_version = 0
-    train_ds = SFTDataset(args.data_path, tokenizer, vision_model=(vision_model, preprocess),
+    if args.multi:
+        print("进行多图训练，建议在指令微调后进行...")
+        train_ds = SFTDataset_multi(args.data_path_multi, tokenizer, vision_model=(vision_model, preprocess),
                           image_special_token=lm_config.image_special_token,
                           max_length=max_seq_len)
+    else:
+        train_ds = SFTDataset(args.data_path, tokenizer, vision_model=(vision_model, preprocess),
+                            image_special_token=lm_config.image_special_token,
+                            max_length=max_seq_len)
     train_sampler = DistributedSampler(train_ds) if ddp else None
     train_loader = DataLoader(
         train_ds,

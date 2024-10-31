@@ -7,15 +7,15 @@ class LMConfig(PretrainedConfig):
 
     def __init__(
             self,
-            dim: int = 512,
-            n_layers: int = 8,
+            dim: int = 512, # 768
+            n_layers: int = 8, # 16
             n_heads: int = 16,
             n_kv_heads: int = 8,
             vocab_size: int = 6400,
             hidden_dim: int = None,
             multiple_of: int = 64,
             norm_eps: float = 1e-5,
-            max_seq_len: int = 200,
+            max_seq_len: int = 512,
             dropout: float = 0.0,
             flash_attn: bool = True,
             image_special_token: str = '<' * 25 + '>' * 25,
