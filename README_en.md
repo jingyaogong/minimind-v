@@ -178,6 +178,7 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
     * 3.3 Download the pre-trained weight file ([Baidu Netdisk](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset/tree/main/out)) of the MiniMind language model and place it in the `./out/` directory, named `*_llm.pth`
     * 3.4 Execute `python 1-pretrain_vlm.py` for pre-training, obtaining `*_vlm_pretrain.pth` as the output weights
     * 3.5 Execute `python 2-sft_vlm.py` for instruction fine-tuning, obtaining `*_vlm_sft.pth` as the output weights for fine-tuning
+    * 3.6 Execute `python 2-sft_vlm.py --multi True` Perform multi-graph instruction fine-tuning based on instruction fine-tuning, resulting in `*_vlm_sft_multi.pth` as the output weight for multi-graph instruction fine-tuning, with a memory usage of approximately 8198M for a 512+8 model.
 
 * 4.Test the inference effect of the self-trained model
     * Ensure that the used, completed training parameter weights `*.pth` files are located in the `./out/` directory
@@ -193,6 +194,7 @@ Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
       ```
     * Use `python 3-eval_chat.py` to test the conversation effect of the model, where the test images are in `./dataset/eval_images`, and you can replace them as needed
       [eval_chat](images/3-eval_chat.png)
+    * Use `python 3-eval_chat.py` Adjust the [multi](./3-eval_chat.py#L61) variable to test the model's multi-graph conversation effect. The test images are located in `./dataset/eval_multi_images`, and you can replace them as needed (The multi-graph dataset is relatively small and contains English dialogues, with the dataset only including two-image comparison scenarios, so the fine-tuning effect is limited).
 
 🍭 【Tip】Both pretraining and full-parameter instruction fine-tuning (pretrain and sft) support multi-GPU acceleration
 
@@ -308,6 +310,71 @@ the entire computation process to output is no different from the LLM part.
 
 ![input](./images/minimind-v-input.png)
 
+The method of implementing multi-graph processing is achieved by injecting multiple `<image>` placeholders, without the need to modify any framework.
+
+> ps: The only point worth noting is that if there are different numbers of images inserted in different conversations during training, you need to use empty features to pad the shorter features (corresponding to [line 267 of the dataset](./model/dataset.py#L267)) to ensure they can be read by the dataloader in the same size.
+
+> pps: This does not need to be done in the prompt; the placeholders are still injected based on the number of images inserted. Therefore, the input feature given to the LLM will not be affected by the padded features.
+
+<details>
+<summary> Considerations for Implementing Video Understanding Capabilities </summary>
+
+For the video understanding capabilities of multi-modal large models, a feasible approach is to refer to the existing Python example for video understanding in MiniCPM-V 2.6.
+The main idea is to extract key frames from the video and then perform multi-graph inference.
+Therefore, if you want to add video understanding capabilities to MiniMind-V, you can build on the existing multi-graph training and refer to the method of extracting key frames in this Python script, then increase the number of images supported in the training files.
+The more MAX_NUM_FRAMES supported, the larger the memory consumption.
+
+```python
+import torch
+from PIL import Image
+from transformers import AutoModel, AutoTokenizer
+from decord import VideoReader, cpu    # pip install decord
+
+model = AutoModel.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True,
+    attn_implementation='sdpa', torch_dtype=torch.bfloat16) # sdpa or flash_attention_2, no eager
+model = model.eval().cuda()
+tokenizer = AutoTokenizer.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True)
+
+MAX_NUM_FRAMES=64 # if cuda OOM set a smaller number
+
+def encode_video(video_path):
+    def uniform_sample(l, n):
+        gap = len(l) / n
+        idxs = [int(i * gap + gap / 2) for i in range(n)]
+        return [l[i] for i in idxs]
+
+    vr = VideoReader(video_path, ctx=cpu(0))
+    sample_fps = round(vr.get_avg_fps() / 1)  # FPS
+    frame_idx = [i for i in range(0, len(vr), sample_fps)]
+    if len(frame_idx) > MAX_NUM_FRAMES:
+        frame_idx = uniform_sample(frame_idx, MAX_NUM_FRAMES)
+    frames = vr.get_batch(frame_idx).asnumpy()
+    frames = [Image.fromarray(v.astype('uint8')) for v in frames]
+    print('num frames:', len(frames))
+    return frames
+
+video_path="video_test.mp4"
+frames = encode_video(video_path)
+question = "Describe the video"
+msgs = [
+    {'role': 'user', 'content': frames + [question]}, 
+]
+
+# Set decode params for video
+params = {}
+params["use_image_id"] = False
+params["max_slice_nums"] = 2 # If cuda OOM and video resolution is greater than 448*448, set to 1
+
+answer = model.chat(
+    image=None,
+    msgs=msgs,
+    tokenizer=tokenizer,
+    **params
+)
+print(answer)
+```
+</details>
+
 <u>With this, all the details of MiniMind-V have been presented.</u>
 
 <u>The implementation of MiniMind-V did not reference any third-party code; it is based on MiniMind with minimal modifications, hence the code implementation is significantly different from models like LlaVA.
@@ -358,15 +425,56 @@ Instruction fine-tuning dataset format:
 }
 ```
 
-Note: For instruction fine-tuning, only one round of conversation is retained, training a single-turn dialogue model, to prevent the performance of small models from being dragged down by long text.
+Multi-graph Instruction Fine-tuning Dataset Format:
+
+```json
+{
+    "id": "000000000000",
+    "image": "0.jpg, 1.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "context: Source Image: <image> Target Image: <image> Instruction: What is the correct image edit instruction that can transform the source image to the target image?"
+      },
+      {
+        "from": "gpt",
+        "value": "take the people out of the back in the photo. Remove the two people behind the woman in the white dress and the man in the blue suit. remove people behind the couple in the centre"
+      }
+    ]
+  }
+```
+
+```json
+{
+    "id": "000000013633",
+    "image": "27266.jpg, 27267.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n<image>\nName all the differences between these two birds."
+      },
+      {
+        "from": "gpt",
+        "value": "animal1 is brown with white tuft while animal2 is white with dark brown wings"
+      }
+    ]
+  }
+```
+
+Notes:
++ For instruction fine-tuning, only one round of conversation is retained, training a single-round conversation model to prevent small model performance from being dragged down by long texts.
++ The multi-graph dataset is relatively small and contains English dialogues, with the dataset only including two-image comparison scenarios, so the fine-tuning effect is limited. Here, only a reference approach is provided.
 
 Final dataset download link: [Baidu Netdisk](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)
+multi_image_dataset: [HuggingFace](https://hf-mirror.com/datasets/xinyanghuang/minimind-v_multi_image/tree/main)
 
 ## Training
 
 The pre-training learns general knowledge about images, such as what a deer or dog is, from 595K datasets.
 
 The instruction fine-tuning learns the real Q&A format for asking questions about images from 230K real dialogue datasets.
+
+Two datasets are provided for multi-graph fine-tuning: the Image Transformation dataset and the Bird Comparison dataset, with lengths of 3.5k and 13.6k respectively, in real Q&A format.
 
 `1-pretrain_vlm.py` executes pre-training, yielding `*_vlm_pretrain.pth` as the output weights of pre-training.
 
@@ -400,6 +508,8 @@ Download link: [HuggingFace](https://huggingface.co/collections/jingyaogong/mini
 # 📌 Test
 
 ### Effectiveness Testing
+
+#### Single-image conversation
 
 <table>
   <thead>
@@ -485,6 +595,26 @@ Download link: [HuggingFace](https://huggingface.co/collections/jingyaogong/mini
   </tbody>
 </table>
 
+#### Multi-image conversation
+
+<table>
+  <thead>
+    <tr>
+      <th>Image1</th>
+      <th>Image2</th>
+      <th>512_sft_multi</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="./dataset/eval_multi_images/bird/0.jpg" alt="a-bird.png" style="width: 200px;"></td>
+      <td><img src="./dataset/eval_multi_images/bird/1.jpg" alt="a-bird.png" style="width: 200px;"></td>
+      <td>animal1 has a brown and black head with a black and white striped head . animal2 has a black head with a white stripe on its wings .</td>
+    </tr>
+  </tbody>
+</table>
+
+
 ### Start Inference
 
 ```bash
@@ -545,10 +675,15 @@ Based on the provided table data, the performance of the four models can be summ
 
 <a href="https://github.com/jingyaogong"><img src="https://avatars.githubusercontent.com/u/62287848" width="70px" height="70px"/></a>
 &nbsp;
+<a href="https://github.com/xinyanghuang7"><img src="https://avatars.githubusercontent.com/u/7503252" width="70px" height="70px"/></a>
+&nbsp;
 <a href="https://github.com/chuanzhubin"><img src="https://avatars.githubusercontent.com/u/2813798" width="70px" height="70px"/></a>
 &nbsp;
 
 ## 😊 Acknowledgments
+
+<a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>:
+<a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">🔗Implemented complete multi-graph branch</a>
 
 <details close> 
 <summary> <b>Reference Links & Thanks to the following excellent papers or projects</b> </summary>

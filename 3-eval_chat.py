@@ -70,7 +70,7 @@ if __name__ == "__main__":
     lm_config.max_seq_len = max_seq_len
     model, tokenizer, vision_model, preprocess = init_model(lm_config, device, multi)
     model.eval()
-    
+
     # -------------------------- 问题和目录设置 -----------------------------------
     if multi:
         image_dir = './dataset/eval_multi_images/bird/'
@@ -95,7 +95,8 @@ if __name__ == "__main__":
         image_encoders = torch.cat(image_encoders, dim=0).unsqueeze(0)
 
         messages = [{"role": "user", "content": prompt}]
-        new_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)[-(max_seq_len - 1):]
+        new_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)[
+                     -(max_seq_len - 1):]
         x = tokenizer(new_prompt).data['input_ids']
         x = torch.tensor(x, dtype=torch.long, device=device)[None, ...]
 
@@ -106,6 +107,9 @@ if __name__ == "__main__":
             history_idx = 0
             for y in res_y:
                 answer = tokenizer.decode(y[0].tolist())
+                if answer and answer[-1] == '�':
+                    y = next(res_y)
+                    continue
                 print(answer[history_idx:], end='', flush=True)
                 history_idx = len(answer)
             print('\n')
@@ -119,7 +123,8 @@ if __name__ == "__main__":
             image_encoder = get_img_embedding(image_process, vision_model).unsqueeze(0)
 
             messages = [{"role": "user", "content": prompt}]
-            new_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)[-(max_seq_len - 1):]
+            new_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)[
+                         -(max_seq_len - 1):]
             x = tokenizer(new_prompt).data['input_ids']
             x = torch.tensor(x, dtype=torch.long, device=device)[None, ...]
 
@@ -131,6 +136,9 @@ if __name__ == "__main__":
                 history_idx = 0
                 for y in res_y:
                     answer = tokenizer.decode(y[0].tolist())
+                    if answer and answer[-1] == '�':
+                        y = next(res_y)
+                        continue
                     print(answer[history_idx:], end='', flush=True)
                     history_idx = len(answer)
                 print('\n')

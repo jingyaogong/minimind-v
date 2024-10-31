@@ -477,8 +477,6 @@ MiniMind-V与MiniMind的代码核心改动不超过100行，上手难度低。</
 + 多图数据集规模相对较小且为英文对话，数据集仅包含两图对比的场景，因此微调效果有限，这里只提供一种参考思路。
 
 
-注：对于指令微调，仅保留了一轮对话，训练单轮对话模型，防止小模型性能被长文本拉低。
-
 
 最终的数据集下载地址：[百度网盘](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)
 
@@ -689,10 +687,15 @@ python web_server.py
 
 <a href="https://github.com/jingyaogong"><img src="https://avatars.githubusercontent.com/u/62287848" width="70px" height="70px"/></a>
 &nbsp;
+<a href="https://github.com/xinyanghuang7"><img src="https://avatars.githubusercontent.com/u/7503252" width="70px" height="70px"/></a>
+&nbsp;
 <a href="https://github.com/chuanzhubin"><img src="https://avatars.githubusercontent.com/u/2813798" width="70px" height="70px"/></a>
 &nbsp;
 
 ## 😊鸣谢
+
+<a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>:
+<a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">🔗实现了完整的多图分支</a>
 
 <details close> 
 <summary> <b>参考链接 & 感谢以下优秀的论文或项目</b> </summary>
