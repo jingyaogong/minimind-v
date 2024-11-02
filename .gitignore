@@ -1,4 +1,5 @@
 model/clip_model/clip-vit-base-patch32/
+model/siglip_model/siglip-vit-base-patch16/
 out/*.pth
 full.json
 trans_json.py

@@ -54,7 +54,7 @@ class PretrainDataset(Dataset):
         sample = self.data[index]
         image_name = sample['image']
         conversation = sample['conversations']
-        # minimind-v的image的特殊占位符，对应每张图切分成10个token，和get_img_process中的数量对应
+        # minimind-v的image的特殊占位符，对应每张图切分成M个token，和get_img_process中的数量对应
         messages = []
         # 遍历 conversation 列表
         for i in range(0, len(conversation), 2):

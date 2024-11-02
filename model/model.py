@@ -326,23 +326,23 @@ class Transformer(PreTrainedModel):
     config_class = LMConfig
     last_loss: Optional[torch.Tensor]
 
-    def __init__(self, params: LMConfig = None):
+    def __init__(self, params: LMConfig = None, vocab_size = 6400):
         super().__init__(params)
         if not params:
             params = LMConfig()
         self.params = params
-        self.vocab_size = params.vocab_size
+        self.vocab_size = vocab_size
         self.n_layers = params.n_layers
         # image的特殊占位符，对应每张图切分成M个token，和get_img_process中的数量对应
         self.image_ids = params.image_ids
 
-        self.tok_embeddings = nn.Embedding(params.vocab_size, params.dim)
+        self.tok_embeddings = nn.Embedding(self.vocab_size, params.dim)
         self.dropout = nn.Dropout(params.dropout)
         self.layers = torch.nn.ModuleList()
         for layer_id in range(self.n_layers):
             self.layers.append(TransformerBlock(layer_id, params))
         self.norm = RMSNorm(params.dim, eps=params.norm_eps)
-        self.output = nn.Linear(params.dim, params.vocab_size, bias=False)
+        self.output = nn.Linear(params.dim, self.vocab_size, bias=False)
         self.tok_embeddings.weight = self.output.weight
         pos_cis = precompute_pos_cis(self.params.dim // self.params.n_heads, self.params.max_seq_len)
         self.register_buffer("pos_cis", pos_cis, persistent=False)
@@ -372,30 +372,35 @@ class Transformer(PreTrainedModel):
         # 查找token中<image>片段的索引，为了替换做准备
         def find_indices(tokens, image_ids):
             image_ids_tensor = torch.tensor(image_ids).to(tokens.device)
-            indices = []
+            len_image_ids = len(image_ids)
 
+            # 使用view来创建一个视图，便于处理滑动窗口
+            tokens_view = tokens.unfold(1, len_image_ids, 1)  # 在第二维度创建滑动窗口
+            # 检查每个滑动窗口是否与image_ids_tensor相等
+            matches = (tokens_view == image_ids_tensor).all(dim=2)  # 对窗口中的每一行进行比较
+
+            # 提取匹配的索引
+            indices = {}
             for batch_idx in range(tokens.size(0)):
-                for i in range(tokens.size(1) - len(image_ids) + 1):
-                    if torch.equal(tokens[batch_idx, i:i + len(image_ids)], image_ids_tensor):
-                        indices.append([batch_idx, i, i + len(image_ids) - 1])  # 返回batch_idx和开始结束索引
-
+                match_indices = matches[batch_idx].nonzero(as_tuple=True)[0]  # 获取非零（匹配）索引
+                if match_indices.numel() > 0:  # 如果有匹配
+                    indices[batch_idx] = [(idx.item(), idx.item() + len_image_ids - 1) for idx in match_indices]
             return indices if indices else None
 
-        image_indices = find_indices(tokens,
-                                     self.image_ids)  # [0, 4, 53], [0, 54, 103], [0, 104, 153], [0, 154, 203] or [1, 4, 53], [1, 54, 103]
+        image_indices = find_indices(tokens, self.image_ids)  # 字典形式存储索引
 
         # 如果此时有图像编码
         if image_encoders is not None:
             vision_proj = self.vision_proj(image_encoders)
-            vision_proj = vision_proj.unsqueeze(0) if len(vision_proj.shape) == 3 else vision_proj
+            vision_proj = vision_proj.unsqueeze(1) if len(vision_proj.shape) == 3 else vision_proj
             if image_indices is not None:
                 # 创建一个新的张量来存储拼接后的结果
                 new_h = []
                 for i in range(h.size(0)):
                     # i即为current_batch_idx索引
                     img_idx = 0
-                    for batch_idx, start_idx, end_idx in image_indices:
-                        if batch_idx == i:
+                    if i in image_indices:  # 直接从字典中获取
+                        for start_idx, end_idx in image_indices[i]:
                             # 插入vision_proj特征
                             before = h[i][:start_idx, :]
                             after = h[i][end_idx + 1:, :]
