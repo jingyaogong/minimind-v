@@ -66,8 +66,12 @@ if __name__ == "__main__":
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     dtype = 'bfloat16'
     max_seq_len = 1024
+    encoder_type="clip"
     # lm_config = LMConfig()
-    lm_config = LMConfig(image_special_token='<'*2+'>'*2, image_ids=[30]*2+[32]*2)
+    if encoder_type == "clip":
+        lm_config = LMConfig()
+    else:
+        lm_config = LMConfig(image_special_token='<'*98+'>'*98, image_ids=[30]*98+[32]*98)
     lm_config.max_seq_len = max_seq_len
     model, tokenizer, vision_model, preprocess = init_model(lm_config, device, multi)
     model.eval()
