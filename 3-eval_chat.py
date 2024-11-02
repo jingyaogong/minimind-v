@@ -41,7 +41,7 @@ def init_model(lm_config, device, multi):
     model = model.to(device)
     print(f'模型参数: {count_parameters(model) / 1e6} 百万 = {count_parameters(model) / 1e9} B (Billion)')
 
-    vision_model, preprocess = get_vision_model()
+    vision_model, preprocess = get_vision_model(encoder_type="clip")
     vision_model = vision_model.to(device)
     return model, tokenizer, vision_model, preprocess
 
@@ -66,7 +66,8 @@ if __name__ == "__main__":
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     dtype = 'bfloat16'
     max_seq_len = 1024
-    lm_config = LMConfig()
+    # lm_config = LMConfig()
+    lm_config = LMConfig(image_special_token='<'*2+'>'*2, image_ids=[30]*2+[32]*2)
     lm_config.max_seq_len = max_seq_len
     model, tokenizer, vision_model, preprocess = init_model(lm_config, device, multi)
     model.eval()
