@@ -387,7 +387,7 @@ class Transformer(PreTrainedModel):
         # 如果此时有图像编码
         if image_encoders is not None:
             vision_proj = self.vision_proj(image_encoders)
-            vision_proj = vision_proj.unsqueeze(0) if len(vision_proj.shape) == 3 else vision_proj
+            vision_proj = vision_proj.unsqueeze(1) if len(vision_proj.shape) == 3 else vision_proj
             if image_indices is not None:
                 # 创建一个新的张量来存储拼接后的结果
                 new_h = []
