@@ -128,7 +128,7 @@ def init_model(lm_config):
 
     print(f'模型可学习参数: {count_parameters(model) / 1e6} 百万 = {count_parameters(model) / 1e9} B (Billion)')
 
-    (vision_model, preprocess) = get_vision_model()
+    (vision_model, preprocess) = get_vision_model(args.visual_encoder)
     vision_model = vision_model.to(args.device)
     return model, tokenizer, (vision_model, preprocess)
 
@@ -166,10 +166,15 @@ if __name__ == "__main__":
     parser.add_argument("--log_interval", type=int, default=10, help="Logging interval")
     parser.add_argument("--save_interval", type=int, default=100, help="Model saving interval")
     parser.add_argument('--local_rank', type=int, default=-1, help='local rank for distributed training')
+    parser.add_argument('--visual_encoder', type=str, default="clip", help='type of visual endcoder')
 
     args = parser.parse_args()
 
-    lm_config = LMConfig()
+    if args.visual_encoder == "clip":
+        lm_config = LMConfig()
+    else:
+        lm_config = LMConfig(image_special_token='<'*98+'>'*98, image_ids=[30]*98+[32]*98)
+
     max_seq_len = lm_config.max_seq_len
     args.save_dir = os.path.join(args.out_dir)
     os.makedirs(args.save_dir, exist_ok=True)
