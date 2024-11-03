@@ -97,9 +97,9 @@ def train_epoch(epoch, wandb):
         if (step + 1) % args.save_interval == 0 and (not ddp or dist.get_rank() == 0):
             model.eval()
             moe_path = '_moe' if lm_config.use_moe else ''
-            if args.multi: # 多图训练权重保存
+            if args.multi:  # 多图训练权重保存
                 ckp = f'{args.save_dir}/{lm_config.dim}{moe_path}_vlm_sft_multi.pth'
-            else: # 单图训练权重保存
+            else:  # 单图训练权重保存
                 ckp = f'{args.save_dir}/{lm_config.dim}{moe_path}_vlm_sft.pth'
 
             if isinstance(model, torch.nn.parallel.DistributedDataParallel):
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     if args.visual_encoder == "clip":
         lm_config = LMConfig()
     else:
-        lm_config = LMConfig(image_special_token='<'*98+'>'*98, image_ids=[30]*98+[32]*98)
+        lm_config = LMConfig(image_special_token='<' * 98 + '>' * 98, image_ids=[30] * 98 + [32] * 98)
 
     max_seq_len = lm_config.max_seq_len
     args.save_dir = os.path.join(args.out_dir)
@@ -229,12 +229,12 @@ if __name__ == "__main__":
     if args.multi:
         print("进行多图训练，建议在指令微调后进行...")
         train_ds = SFTDataset_multi(args.data_path_multi, tokenizer, vision_model=(vision_model, preprocess),
-                          image_special_token=lm_config.image_special_token,
-                          max_length=max_seq_len)
+                                    image_special_token=lm_config.image_special_token,
+                                    max_length=max_seq_len)
     else:
         train_ds = SFTDataset(args.data_path, tokenizer, vision_model=(vision_model, preprocess),
-                            image_special_token=lm_config.image_special_token,
-                            max_length=max_seq_len)
+                              image_special_token=lm_config.image_special_token,
+                              max_length=max_seq_len)
     train_sampler = DistributedSampler(train_ds) if ddp else None
     train_loader = DataLoader(
         train_ds,

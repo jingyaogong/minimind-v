@@ -66,12 +66,12 @@ if __name__ == "__main__":
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     dtype = 'bfloat16'
     max_seq_len = 1024
-    encoder_type="clip"
+    encoder_type = "clip"
     # lm_config = LMConfig()
     if encoder_type == "clip":
         lm_config = LMConfig()
     else:
-        lm_config = LMConfig(image_special_token='<'*98+'>'*98, image_ids=[30]*98+[32]*98)
+        lm_config = LMConfig(image_special_token='<' * 98 + '>' * 98, image_ids=[30] * 98 + [32] * 98)
     lm_config.max_seq_len = max_seq_len
     model, tokenizer, vision_model, preprocess = init_model(lm_config, device, multi)
     model.eval()
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     # -------------------------- 问题和目录设置 -----------------------------------
     if multi:
         image_dir = './dataset/eval_multi_images/bird/'
-        prompt = "<image>\n<image>\nName all the differences between these two birds."
+        prompt = f"{lm_config.image_special_token}\n{lm_config.image_special_token}\nName all the differences between these two birds."
     else:
         image_dir = './dataset/eval_images/'
         prompt = lm_config.image_special_token + '\n这个图片描述的是什么内容？'

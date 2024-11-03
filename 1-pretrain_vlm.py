@@ -173,7 +173,7 @@ if __name__ == "__main__":
     if args.visual_encoder == "clip":
         lm_config = LMConfig()
     else:
-        lm_config = LMConfig(image_special_token='<'*98+'>'*98, image_ids=[30]*98+[32]*98)
+        lm_config = LMConfig(image_special_token='<' * 98 + '>' * 98, image_ids=[30] * 98 + [32] * 98)
 
     max_seq_len = lm_config.max_seq_len
     args.save_dir = os.path.join(args.out_dir)

@@ -178,7 +178,7 @@ class SFTDataset(Dataset):
         image_encoders = get_img_process(image, self.preprocess)
 
         return X_tensor, Y_tensor, loss_mask_tensor, image_encoders
-    
+
 
 class SFTDataset_multi(Dataset):
     def __init__(self, json_path, tokenizer, vision_model=None, max_length=1024,

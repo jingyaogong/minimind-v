@@ -326,12 +326,12 @@ class Transformer(PreTrainedModel):
     config_class = LMConfig
     last_loss: Optional[torch.Tensor]
 
-    def __init__(self, params: LMConfig = None, vocab_size = 6400):
+    def __init__(self, params: LMConfig = None):
         super().__init__(params)
         if not params:
             params = LMConfig()
         self.params = params
-        self.vocab_size = vocab_size
+        self.vocab_size = params.vocab_size
         self.n_layers = params.n_layers
         # image的特殊占位符，对应每张图切分成M个token，和get_img_process中的数量对应
         self.image_ids = params.image_ids
@@ -373,12 +373,10 @@ class Transformer(PreTrainedModel):
         def find_indices(tokens, image_ids):
             image_ids_tensor = torch.tensor(image_ids).to(tokens.device)
             len_image_ids = len(image_ids)
-
             # .generate时，在初始化后直接跳过
             if len_image_ids > tokens.size(1):
-                # print(f"len_image_ids ({len_image_ids}) is greater than sequence length ({tokens.size(1)}), skipping.")
                 return None
-            
+
             # 使用view来创建一个视图，便于处理滑动窗口
             tokens_view = tokens.unfold(1, len_image_ids, 1)  # 在第二维度创建滑动窗口
             # 检查每个滑动窗口是否与image_ids_tensor相等
@@ -451,7 +449,6 @@ class Transformer(PreTrainedModel):
             self.last_loss = None
 
         self.OUT.__setitem__('logits', logits)
-        # self.OUT.__setitem__('last_loss', self.last_loss)
         self.OUT.__setitem__('loss', self.last_loss)
         return self.OUT
 

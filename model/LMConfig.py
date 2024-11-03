@@ -7,8 +7,8 @@ class LMConfig(PretrainedConfig):
 
     def __init__(
             self,
-            dim: int = 512, # 768
-            n_layers: int = 8, # 16
+            dim: int = 512,  # 768
+            n_layers: int = 8,  # 16
             n_heads: int = 16,
             n_kv_heads: int = 8,
             vocab_size: int = 6400,
@@ -19,7 +19,7 @@ class LMConfig(PretrainedConfig):
             dropout: float = 0.0,
             flash_attn: bool = True,
             image_special_token: str = '<' * 25 + '>' * 25,
-            image_ids=[30] * 25 + [32] * 25,
+            image_ids: List = [30] * 25 + [32] * 25,
             ####################################################
             # Here are the specific configurations of MOE
             # When use_moe is false, the following is invalid

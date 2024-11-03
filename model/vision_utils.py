@@ -40,10 +40,11 @@ def get_img_embedding(batch_encoding, vision_model):
         embeddings.append(output.last_hidden_state)
 
     # 从 BatchEncoding 中提取图像张量
-    if isinstance(batch_encoding, transformers.tokenization_utils_base.BatchEncoding) or isinstance(batch_encoding, transformers.feature_extraction_utils.BatchFeature):
+    if (isinstance(batch_encoding, transformers.tokenization_utils_base.BatchEncoding)
+            or isinstance(batch_encoding, transformers.feature_extraction_utils.BatchFeature)):
         image_tensor = batch_encoding['pixel_values']
     else:
-        image_tensor = batch_encoding # torch.Size([32, 4, 3, 224, 224])
+        image_tensor = batch_encoding  # torch.Size([32, 4, 3, 224, 224])
 
     # 如果图像张量的形状是5维，则无需添加额外维度
     if len(image_tensor.shape) == 4:
@@ -66,5 +67,6 @@ def get_img_embedding(batch_encoding, vision_model):
         hook.remove()
 
     # 拼接所有特征向量成为一个张量
-    all_embeddings = torch.stack(embeddings, dim=0).squeeze() # torch.Size([32, 4, 50, 768]) or torch.Size([32, 2, 196, 768])
+    all_embeddings = torch.stack(embeddings, dim=0).squeeze()
+    # torch.Size([32, 4, 50, 768]) or torch.Size([32, 2, 196, 768])
     return all_embeddings
