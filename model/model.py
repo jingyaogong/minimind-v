@@ -430,9 +430,9 @@ class Transformer(PreTrainedModel):
         _bsz, seqlen = tokens.shape
         # language proj token
         h = self.tok_embeddings(tokens)
-        h = self.dropout(h)
         # vision proj token
         h = self.count_vision_proj(tokens=tokens, h=h, image_encoders=image_encoders, seqlen=seqlen)
+        h = self.dropout(h)
 
         pos_cis = self.pos_cis[current_idx:current_idx + seqlen]
         for idx, layer in enumerate(self.layers):
