@@ -680,8 +680,8 @@ python web_server.py
 
 > [!TIP]
 > 如果您觉得 `MiniMind-V`对您有所帮助，可以在 GitHub 上加一个⭐<br/>
-> 篇幅不短水平有限难免纰漏，欢迎在Issues交流指正或提交PR改进项目<br/>
-> 您的支持就是持续改进项目的动力
+> 水平有限难免存在未知的纰漏，欢迎所有人在Issues交流指正或提交PR改进项目<br/>
+> 您的支持就是持续改进项目的动力，谢谢！
 
 ## 🤝[贡献者](https://github.com/jingyaogong/minimind/graphs/contributors)
 

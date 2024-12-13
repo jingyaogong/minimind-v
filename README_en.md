@@ -667,9 +667,9 @@ Based on the provided table data, the performance of the four models can be summ
 # 📌 Acknowledge
 
 > [!TIP]
-> If you find `MiniMind-V` helpful, please add a ⭐ on GitHub<br/>
-> Due to the length and limited proficiency, there may be oversights; feel free to discuss corrections or submit PRs to improve the project on Issues<br/>
-> Your support is the driving force for continuous improvement of the project
+> If you find `MiniMind-V` helpful, please consider giving it a ⭐ on GitHub. <br/>
+> Given the limited expertise, there may be unknown issues, and we welcome everyone to discuss, correct, or submit PRs to improve the project in Issues. <br/>
+> Your support is the driving force behind continuous improvements to the project. Thank you!
 
 ## 🤝 [Contributors](https://github.com/jingyaogong/minimind/graphs/contributors)
 
