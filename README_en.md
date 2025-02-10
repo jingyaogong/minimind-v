@@ -1,6 +1,6 @@
 <div align="center">
 
-![logo](./images/logo-minimind-v.png)
+![logo](./images/logo.png)
 
 </div>
 
@@ -46,7 +46,7 @@
 
 The demo has been deployed to ModelScope's creative space, where you can experience it on this website:
 
-[ModelScope Online Experience](https://modelscope.cn/studios/gongjy/minimind-v)
+[🔗ModelScope Online Experience🔗](https://modelscope.cn/studios/gongjy/minimind-v)
 
 [🎉🎉BiliBili Video🎉🎉](https://www.bilibili.com/video/BV1Sh1vYBEzY)
 
