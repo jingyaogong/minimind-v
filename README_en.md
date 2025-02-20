@@ -27,315 +27,386 @@
 
 </div>
 
+* This project aims to train a super-small multimodal vision-language model, **MiniMind-V**, with just a cost of 3 RMB
+  and 2 hours of work, starting from scratch!
+* The smallest version of **MiniMind-V** is only about $\frac{1}{7000}$ the size of GPT-3, designed to enable fast
+  inference and even training on personal GPUs.
+* **MiniMind-V** is an extension of the visual capabilities of the [MiniMind](https://github.com/jingyaogong/minimind)
+  pure language model.
+* The project includes full code for the minimalist structure of large VLM models, dataset cleaning, pretraining, and
+  supervised fine-tuning (SFT).
+* This is not only the smallest implementation of an open-source VLM model but also a concise tutorial for beginners in
+  vision-language models.
+* The hope is that this project can provide a useful example to inspire others and share the joy of creation, helping to
+  drive progress in the wider AI community!
 
-* This open-source project aims to train a small-parameter visual modal capable language model, **MiniMind-V**, from scratch within as fast as 3 hours.
-* **MiniMind-V** is extremely lightweight, with the smallest version being about $\frac{1}{7000}$ the size of GPT-3, aiming to be quickly inferable and trainable even on personal GPUs.
-* This is not only an implementation of an open-source model but also a tutorial for getting started with Visual Language Models (VLMs).
-* We hope this project can provide researchers with a starting example, helping everyone to get up to speed and generate more exploration and innovation in the VLM field.
-
-  > To avoid misunderstanding, "from scratch" specifically refers to further developing the pure language model MiniMind (which is a fully from-scratch trained GPT-like model) with visual capabilities.
-  > For more details on the latter, please refer to the twin project [MiniMind](https://github.com/jingyaogong/minimind).
-
-  > To avoid misunderstanding, "as fast as 3 hours" means you need to have a machine with a hardware configuration higher than mine. The detailed specifications will be provided below.
-
-
-
-![modelscope](./images/modelscope-demo.gif)
+> To avoid misunderstandings, the "2 hours" is based on testing (`1 epoch`) with an NVIDIA 3090 hardware device (single GPU), and
+> the "3 RMB" refers to GPU server rental costs. 
 
 <div align="center">
 
-The demo has been deployed to ModelScope's creative space, where you can experience it on this website:
+![minimind2-v](./images/minimind2-v.gif)
 
-[🔗ModelScope Online Experience🔗](https://modelscope.cn/studios/gongjy/minimind-v)
-
-[🎉🎉BiliBili Video🎉🎉](https://www.bilibili.com/video/BV1Sh1vYBEzY)
+[🔗🤖 Online Experience](https://www.modelscope.cn/studios/gongjy/MiniMind-V) | [🔗🎞️ Video Introduction](https://www.bilibili.com/video/BV1Sh1vYBEzY)
 
 </div>
 
 # 📌 Introduction
 
-Visual Language Models (VLMs) like GPT-4V, Qwen-VL, LlaVA, etc., although impressive in performance, often require extremely high hardware configurations.
-For personal devices, not only is the GPU memory far from sufficient to support training, but even inference can be very difficult.
-We learn about the somewhat novel VLMs through reading papers or public account explanations, but often end up with a vague understanding.
-What we really need to know is:
-Is multimodal large models really as complex as imagined? What is their code implementation like?
-Is the training process really that difficult? Can I start training from scratch with just one 2080Ti GPU?
-
-Through **MiniMind-V**, this project hopes to answer these questions and help researchers understand the core principles of visual language models under limited hardware conditions.
+“Building a plane with Legos is much more exciting than flying in first class!”
+Is it really as complex as imagined to build a VLM-based multimodal large model? How is the code implementation done?
+Is the training process difficult? Now, let's explore the answers and feel the joy of creation together!
 
 > [!TIP]
-> (As of 2024-10-04) The MiniMind-V series has completed pre-training of 2 model versions, requiring as little as 27M (0.027B) to have image recognition and dialogue capabilities!
+> (As of 2025-02-20) The MiniMind-V series has completed the training of the following model versions, with the smallest
+> requiring only 26M (0.026B) parameters, capable of both image recognition and conversation!
 
-| Model (Size)                   | Tokenizer Length | Inference Usage   | Release    | Subjective Rating (/100) |
-| --------------------------- | ------------- | -------- | ------------ | ------------ |
-| minimind-v-v1-small (27M)  | 6400         | 0.6 GB   | 2024.10.04  | 50'         |
-| minimind-v-v1 (109M)       | 6400         | 1.1 GB   | 2024.10.04  | 60'         |
-
-> This analysis was conducted on 2×RTX 3090 GPUs with Torch 2.1.2, CUDA 12.2, and Flash Attention 2.
+| Model (Size)              | Inference Memory | Release    |
+|---------------------------|------------------|------------|
+| MiniMind2-V (104M)        | 0.6 GB           | 2025.02.20 |
+| MiniMind2-Small-V (26M)   | 1.1 GB           | 2025.02.20 |
+| minimind-v-v1-small (27M) | 0.6 GB           | 2024.10.04 |
+| minimind-v-v1 (109M)      | 1.1 GB           | 2024.10.04 |
 
 ### 👉**Recent Updates**
 
 <details close> 
-<summary> <b>2024-10-05 (newest 🎉)</b> </summary>
+<summary> <b>2025-02-20 (newest 🎉)</b> </summary>
 
-- MiniMind-V arrives as scheduled, first open-source release
+- MiniMind2-V updated alongside MiniMind2
+- Significant reduction of all redundant code, standardized code format
+- Major simplification of the model's redundant structure
+- Updated dataset format, expanded with new SFT datasets
+- Better performance than the previous VLM version!
 
 </details>
 
-# 📌 Environment
+<details close> 
+<summary> <b>2024-10-05</b> </summary>
 
-This is my personal software and hardware configuration; adjust as necessary:
+- MiniMind-V released on schedule, first open-source release
 
-```bash
-CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
-Memory: 128 GB
-GPU: NVIDIA GeForce RTX 3090(24GB) * 2
-Environment: python 3.9 + Torch 2.1.2 + DDP single-machine multi-GPU training
-```
+</details>
 
-* Ubuntu == 20.04
-* Python == 3.9
-* Pytorch == 2.1.2
-* CUDA == 12.2
+# 📌 Quick Start
+
+<details style="color:rgb(128,128,128)">
+<summary>Sharing my hardware and software configuration (for reference only)</summary>
+
+* CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
+* RAM: 128 GB
+* GPU: NVIDIA GeForce RTX 3090(24GB) * 8
+* Ubuntu==20.04
+* CUDA==12.2
+* Python==3.10.16
 * [requirements.txt](./requirements.txt)
 
-# 📌 Quick Start Test
+</details>
 
-> BTW: If you don't have Git LFS installed, please install it first with `sudo apt-get update`, `sudo apt-get install git-lfs`.
+### Step 0
 
+```bash
+# Clone the code repository
+git clone https://github.com/jingyaogong/minimind-v
+```
 
-* 0. Clone the project
-    ```bash
-    git clone https://github.com/jingyaogong/minimind-v 
-    cd minimind-v
-    ```
+```bash
+# Download the clip model to the ./model/vision_model directory
+git clone https://huggingface.co/openai/clip-vit-base-patch16
+# or
+git clone https://www.modelscope.cn/models/openai-mirror/clip-vit-base-patch16
+```
 
-* 1. Install the environment
-  ```bash
-  pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-  ```
-  ```text
-  # Test if torch can use CUDA
-  import torch
-  print(torch.cuda.is_available())
-  ```
+## Ⅰ Test an existing model's performance
 
-  > If it is not available, please go to [torch_stable](https://download.pytorch.org/whl/torch_stable.html)
-  to download the whl file for installation. Refer to [this link](https://blog.csdn.net/weixin_45456738/article/details/141029610?ops_request_misc=&request_id=&biz_id=102&utm_term=安装torch&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-2-141029610.nonecase&spm=1018.2226.3001.4187)
-  
-  
-* 2. Download the pre-trained model weights to the project root directory `minimind-v-v1`
-    ```bash
-    git clone https://huggingface.co/jingyaogong/minimind-v-v1
-    ```
+### 1. Environment Preparation
 
-* 3. Download the pre-trained `clip-vit-base-patch32` model to the `model/clip_model` directory:
-    ```bash
-    cd model/clip_model 
-    git clone https://hf-mirror.com/openai/clip-vit-base-patch32
-    ```
+```bash
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
 
-* 4. Start the chat web server for testing conversations
-    ```bash
-    python web_server.py
-    ```
+### 2. Download the model
 
-![web_server](images/web_server.gif)
+```bash
+git clone https://huggingface.co/jingyaogong/MiniMind2-V
+```
 
-# 📌 Quick Start Train
+### 3. Command-line Q&A
 
-> BTW: If you don't have Git LFS installed, please install it first with `sudo apt-get update`, `sudo apt-get install git-lfs`.
+```bash
+# load=0: load from pytorch model, load=1: load from transformers-hf model
+python eval_vlm.py --load 1
+```
 
-* 0.Clone the project code
-    ```text
-    git clone https://github.com/jingyaogong/minimind-v & cd minimind-v
-    ```
+### 4. Or start the WebUI
 
-* 1.Environment setup
-  ```bash
-  pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-  ```
-  ```text
-  # Test if torch can use CUDA
-  import torch
-  print(torch.cuda.is_available())
-  ```
+```bash
+python web_demo_vlm.py
+```
 
-  > If it is not available, please go to [torch_stable](https://download.pytorch.org/whl/torch_stable.html)
-  to download the whl file for installation. Refer to [this link](https://blog.csdn.net/weixin_45456738/article/details/141029610?ops_request_misc=&request_id=&biz_id=102&utm_term=安装torch&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-2-141029610.nonecase&spm=1018.2226.3001.4187)
-  
-  
-* 2.Download the `clip-vit-base-patch32` model and place it in the `./model/clip_model` directory:
-    ```bash
-    cd ./model/clip_model & git clone https://hf-mirror.com/openai/clip-vit-base-patch32
-    ```
-  
-* 3.If you want to train it yourself
+## Ⅱ Train from scratch
 
-    * 3.1 Download all contents of the dataset ([Baidu Netdisk](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)) to the `./dataset` directory, and unzip `pretrain_images.zip` and `sft_images.zip`
-    * 3.2 Adjust the model parameters in `./model/LMConfig.py`
-      > Only need to adjust the dim and n_layers parameters, which are `(512+8)` or `(768+16)`, corresponding to `minimind-v-v1-small` and `minimind-v-v1`
-    * 3.3 Download the pre-trained weight file ([Baidu Netdisk](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) or [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset/tree/main/out)) of the MiniMind language model and place it in the `./out/` directory, named `*_llm.pth`
-    * 3.4 Execute `python 1-pretrain_vlm.py` for pre-training, obtaining `*_vlm_pretrain.pth` as the output weights
-    * 3.5 Execute `python 2-sft_vlm.py` for instruction fine-tuning, obtaining `*_vlm_sft.pth` as the output weights for fine-tuning
-    * 3.6 Execute `python 2-sft_vlm.py --multi True` Perform multi-graph instruction fine-tuning based on instruction fine-tuning, resulting in `*_vlm_sft_multi.pth` as the output weight for multi-graph instruction fine-tuning, with a memory usage of approximately 8198M for a 512+8 model.
+### 1. Environment Preparation
 
-* 4.Test the inference effect of the self-trained model
-    * Ensure that the used, completed training parameter weights `*.pth` files are located in the `./out/` directory
-    * You can also directly download the [completed model weight files](https://pan.baidu.com/s/1LE1SPoPYGS7VNtT1tpf7DA?pwd=6666) and use the `*.pth` weight files I have trained
-       ```text
-      minimind-v/out
-      ├── 512_llm.pth
-      ├── 512_vlm_pretrain.pth
-      ├── 512_vlm_sft.pth
-      ├── 768_llm.pth
-      ├── 768_vlm_pretrain.pth
-      ├── 768_vlm_sft.pth
-      ```
-    * Use `python 3-eval_chat.py` to test the conversation effect of the model, where the test images are in `./dataset/eval_images`, and you can replace them as needed
-      [eval_chat](images/3-eval_chat.png)
-    * Use `python 3-eval_chat.py` Adjust the [multi](./3-eval_chat.py#L61) variable to test the model's multi-graph conversation effect. The test images are located in `./dataset/eval_multi_images`, and you can replace them as needed (The multi-graph dataset is relatively small and contains English dialogues, with the dataset only including two-image comparison scenarios, so the fine-tuning effect is limited).
+```bash
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
 
-🍭 【Tip】Both pretraining and full-parameter instruction fine-tuning (pretrain and sft) support multi-GPU acceleration
+<details style="color:rgb(128,128,128)">
+<summary>Note: Test if Torch can use CUDA</summary>
 
-* Single machine N-card training launch (DDP)
-    ```bash
-    torchrun --nproc_per_node N 1-pretrain_vlm.py
-    # and
-    torchrun --nproc_per_node N 2-sft_vlm.py
-    ```
+```bash
+import torch
+print(torch.cuda.is_available())
+```
 
-* Record the training process
-    ```bash
-    torchrun --nproc_per_node N 1-pretrain_vlm.py --use_wandb
-    # and
-    python 1-pretrain_vlm.py --use_wandb
-    ```
-  By adding the `--use_wandb` parameter, you can record the training process, and after the training is complete, you can view the training process on the wandb website. You can specify the project name and run name by modifying the `wandb_project` and `wandb_run_name` parameters.
+If unavailable, download the whl file from [torch_stable](https://download.pytorch.org/whl/torch_stable.html) for
+installation. Refer
+to [this link](https://blog.csdn.net/weixin_45456738/article/details/141029610?ops_request_misc=&request_id=&biz_id=102&utm_term=%E5%AE%89%E8%A3%85torch&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-2-141029610.nonecase&spm=1018.2226.3001.4187)
+for help.
+
+</details>
+
+### 2. Download Data
+
+Download the required dataset files from
+the [dataset download link](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset), create a `./dataset`
+directory, and place the files under `./dataset`.
+
+`*.jsonl` is the Q&A dataset, and `*images` are the accompanying image data. After downloading, decompress the image
+data.
+
+<details style="color:rgb(128,128,128)">
+<summary>Note: Dataset Details</summary>
+
+Please reserve about 5GB of space for the dataset. If there is insufficient space for pretrain data, you can try
+skipping the pretrain training step and proceed directly to SFT training.
+
+</details>
+
+### 3. Start Training
+
+**3.1 Pretraining (Learning image description)**
+
+```bash
+python train_pretrain_vlm.py --epochs 4
+```
+
+> Run pretraining to get `pretrain_vlm_*.pth` as the pretrained model's output weights (* represents the model
+> dimension, default is 512).
+
+**3.2 Supervised Fine-Tuning (Learning image-caption dialogue style)**
+
+```bash
+python train_sft_vlm.py --epochs 4
+```
+
+> Perform supervised fine-tuning to get `sft_vlm_*.pth` as the output weights for the fine-tuned model.
+
+<details style="color:rgb(128,128,128)">
+<summary>Note: Training Details</summary>
+
+By default, the training process saves model parameters every 100 steps to the `./out/***.pth` file (it will overwrite
+previous weight files).
+
+</details>
+
+---
+
+### 4. Test the Model's Performance
+
+Ensure that the model `*.pth` file you want to test is located in the `./out/` directory.
+You can also directly download the pre-trained `*.pth` file
+from [here](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch).
+
+```bash
+python eval_vlm.py --model_mode 1 # Default is 0: test pretrain model, set to 1: test sft model
+```
+
+---
+
+> [!TIP]
+> The training scripts are based on PyTorch's native framework and support multi-card acceleration. If your device has
+> N (N>1) GPUs:
+
+Single-machine N-card training method (DDP, supports multi-machine multi-card cluster)
+
+```bash
+torchrun --nproc_per_node N train_xxx.py
+```
+
+<details style="color:rgb(128,128,128)">
+<summary>Note: Other Details</summary>
+
+Single-machine N-card training (DeepSpeed)
+
+```bash
+deepspeed --master_port 29500 --num_gpus=N train_xxx.py
+```
+
+You can enable wandb logging during training:
+
+```bash
+# You need to log in: wandb login
+torchrun --nproc_per_node N train_xxx.py --use_wandb
+# and
+python train_xxx.py --use_wandb
+```
+
+By adding the `--use_wandb` parameter, you can log the training process, and after training is complete, you can view
+the process on the wandb website. You can specify the project name and run name by modifying the `wandb_project`
+and `wandb_run_name` parameters.
+
+</details>
 
 # 📌 VLM Detail
 
-The base language model MiniMind (LLM) for MiniMind-V (VLM) comes from the twin project [minimind](https://github.com/jingyaogong/minimind). For specific details on the model architecture, training specifics, principles, and test results, please refer to the [minimind](https://github.com/jingyaogong/minimind) project. To avoid redundancy, we will not discuss the LLM-related parts here, assuming you have a basic understanding of MiniMind (LLM).
+The base language model of MiniMind-V (VLM), MiniMind (LLM), comes from the twin
+project [minimind](https://github.com/jingyaogong/minimind). For detailed information on the model structure, training
+specifics, principles, and testing results, please refer to the [minimind](https://github.com/jingyaogong/minimind)
+project. To reduce redundancy, the discussion on LLM-related topics is omitted here, assuming you have a basic
+understanding of MiniMind (LLM).
 
-> PS: Even if you do not wish to delve into the details of MiniMind (LLM), you can directly refer to Quick Test and Quick Start to quickly test or train MiniMind-V. This will not be significantly affected.
+> Even if you are not very familiar with the details of LLMs, you can still follow the "Quick Start" guide to train a
+> MiniMind-V, as it remains unaffected and the repository focuses on the lowest cost for out-of-the-box use!
 
-The structure of MiniMind-V remains almost unchanged, with only two additional sub-modules added: Visual Encoder and feature projection, as well as a multimodal fusion branch, to support input from multiple modalities:
+MiniMind-V's structure adds two submodules, a Visual Encoder and a feature projection, with a modality-mixing branch to
+support inputs from multiple modalities:
 ![LLM-structure](./images/VLM-structure.png)
 ![LLM-structure](./images/VLM-structure-moe.png)
 
-At this point, it's interesting to ponder two questions: What is a **L**arge **L**anguage **M**odel (LLM)? And what is a multimodal model?
 
-* [This article](https://www.jiqizhixin.com/articles/2024-09-15-3) perfectly articulates my thoughts, suggesting that the term LLM is quite inaccurate!
+<details>
+<summary> [Important] Some Interesting Thoughts </summary>
 
-  > Although Large Language Models (LLMs) carry the word "language" in their name, they are actually not very related to language; this is merely a historical issue. A more accurate name would be autoregressive Transformer or something similar.
-  LLMs are more of a general statistical modeling technique, primarily using autoregressive Transformers to simulate token streams, and these tokens can represent text, images, audio, action choices, or even molecules, among other things.
-  Therefore, theoretically, any problem that can be framed as a process of simulating a series of discrete tokens can be addressed using LLMs.
-  In fact, as the large language model technology stack matures, we may see an increasing number of problems being brought into this modeling paradigm. That is, the problem is fixed on using LLMs for 'predicting the next token', with the usage and meaning of tokens varying across different domains.
+Let's take a moment to think about two questions:
 
-* [Professor Li Xi](https://person.zju.edu.cn/xilics#694283) similarly corroborates my view (the exact wording is not recalled, but the gist is as follows):
+* What is a **Large Language Model (LLM)**?
+* What is a multimodal model?
 
-  > Text, video, speech, and actions, which appear to humans as "multimodal" signals, are essentially just a classification concept for information storage by humans.
-  Just like `.txt` and `.png` files, although they differ in visual presentation and higher-level representation, there is no fundamental difference at their core.
-  The notion of "multimodality" arises simply because of the human need to categorize these signals at different perceptual levels.
-  However, for machines, regardless of the "modality" of the signal, they ultimately present as a string of binary "unimodal" digital sequences.
-  Machines do not differentiate the modality source of these signals but rather process and analyze the information content carried by these sequences.
+[This article](https://www.jiqizhixin.com/articles/2024-09-15-3) perfectly aligns with my thoughts:  
+Although the name "large language model" (LLM) contains the word "language," they are actually not closely related to
+language; this is just a historical issue. A more accurate name would be self-regressive Transformer or something else.
+LLMs are more of a general statistical modeling technology, mainly using a self-regressive Transformer to simulate token
+flows. These tokens can represent text, images, audio, action choices, and even molecules—anything, really.  
+Therefore, as long as the problem can be converted into a process of simulating a series of discrete tokens, LLM can
+theoretically solve it. In fact, with the increasing maturity of large language model technologies, we may see more and
+more problems falling under this modeling paradigm. In other words, the problem is fixed in using LLM to "predict the
+next token," but the role and meaning of the tokens differ in each domain.
 
----
+[ZJU-LiXi](https://person.zju.edu.cn/xilics#694283) has also mentioned a similar viewpoint (roughly stated below):  
+Text, video, audio, actions, etc., are considered "multimodal" signals in human perception, but the term "modality" is
+essentially just a classification concept based on how humans store information. Just like `.txt` and `.png` files,
+though they differ in visual presentation and higher-level forms, they are fundamentally the same. The concept of "
+multimodal" arose simply because humans need to categorize these signals based on different sensory dimensions.  
+However, for machines, regardless of the signal's "modality," they are ultimately presented as a sequence of binary "
+monomodal" numbers. Machines do not differentiate the origin of these signals; they just process and analyze the
+information contained within these sequences.
 
-I personally believe that **G**enerative **P**retrained **T**ransformer (GPT) is a more fitting term than **L**arge **L**anguage **M**odel (LLM),
-and thus I prefer to use "GPT" to represent LLM/VLM/GPT-like architectures, rather than to piggyback on OpenAI's popularity.
+Personally, I think **Generative Pretrained Transformer (GPT)** is a more fitting term than **Large Language Model (LLM)
+**, and I prefer to use "GPT" to represent models in the LLM/VLM/GPT-like architecture series rather than to ride on
+OpenAI's coattails.
 
----
+To summarize what GPTs do in one sentence:
 
-In summary, we can encapsulate what GPT does in one sentence:
-GPT models predict the next, and the next, and the next token... until the model outputs an end token; here, the "token" does not necessarily have to be text!
+A GPT model predicts the next, next-next, next-next-next token, etc., based on the current token... until the model
+outputs the end token; here, the "token" doesn’t necessarily have to be text!
 
----
+```text
+> For an LLM model, if we need to understand an "image," we just treat the "image" as a special "foreign language" that has never been encountered before, and translate it into the "LLM language" via a "foreign language dictionary."
+> For an LLM model, if we need to understand "audio," we just treat "audio" as a special "foreign language" that has never been encountered before, and translate it into the "LLM language" via a "foreign language dictionary."
+> ...
+```
 
-* For LLM models, if understanding "images" is required, we can treat "images" as a special kind of "foreign language" never seen before, translating them through a "foreign dictionary" into a special language input for the LLM.
-* For LLM models, if understanding "audio" is required, we can treat "audio" as a special kind of "foreign language" never seen before, translating them through a "foreign dictionary" into a special language input for the LLM.
-* ...
+<u>**To obtain MiniMind-V, we only need to do these 2 things:**</u>
 
----
+1. Use the **"foreign language dictionary"** that is good at translating images, to translate the image from the **"
+   foreign language"** into a model-understandable **"LLM language."**
+2. Fine-tune the LLM so that it and the **"foreign language dictionary"** go through a period of adaptation, thereby
+   better understanding images.
 
-<u>**So, to get MiniMind-V, we only need to accomplish two things:**</u>
-
-1. Use a "foreign dictionary" proficient in translating images to translate the "foreign language" of images into the "LLM language" that the model can understand.
-2. Fine-tune the LLM so that it goes through a period of adjustment with the "foreign dictionary," thereby better understanding images.
-
----
-
-The "foreign dictionary" is generally referred to as the Visual Encoder model.
-Similar to visual-language models such as LlaVA and Qwen-VL, MiniMind-V also selects open-source Clip series models as the Visual Encoder.
-Specifically, it uses [clip-vit-base-patch32](https://huggingface.co/openai/clip-vit-base-patch32), a classic Visual Encoder based on the ViT-B/32 architecture, for describing image-text information.
-The input image size is 224x224, and since the patches are 32×32, it generates 7*7+1(cls_token)=50 tokens as input to the encoder layer,
-ultimately producing a 1×768 dimensional embedding vector for calculating error with text.
-We do not need the final embedding representation, so we only take the output of the encoder layer, which is the output features of the VIT backbone.
-In the code, this corresponds to the hook function in [./model/vision_utils.py](./model/vision_utils.py)'s get_img_embedding.
-It retrieves the 50×768 dimensional features from the previous layer, which we then input as 50 visual tokens into MiniMind-V.
-There are also larger Clip models like clip-vit-large-patch14, which have a stronger image understanding capability,
-but a single image would generate 257 tokens, which, for a model of MiniMind's scale, would result in too long a context of image tokens, which is not conducive to training.
-
-After obtaining the image encoder features, on one hand, it is necessary to align the 768-dimensional visual tokens with the text tokens of the LLM,
-on the other hand, the image features must be mapped to the same space as the text embeddings, i.e., the text tokens and the native visual tokens need to be aligned and cannot be treated equally; this can be called cross-modal feature alignment.
-[LlaVA-1](https://arxiv.org/pdf/2304.08485) accomplished this with a simple unbiased linear transformation, and the results were excellent; MiniMind-V does the same.
+The "foreign language dictionary" is referred to as the Visual Encoder model.  
+Like LlaVA, Qwen-VL, and other visual language models, MiniMind-V also uses the open-source Clip series models as the
+Visual Encoder.  
+Specifically, we use [clip-vit-base-patch16](https://huggingface.co/openai/clip-vit-base-patch16), a classic Visual
+Encoder based on the ViT-B/16 architecture for describing image-text information.  
+The input image size is 224x224, and because the Patch size is 16×16, it generates 16*16=196 tokens as the input to the
+encoder layer, which produces a 1×768 dimensional embedding vector for calculating error with the text.  
+We don’t need the final embedding representation, so we only take the output from the encoder layer, which is the output
+feature from the core ViT backbone.  
+It receives the feature of size 196×768 from the previous layer, which we use as 196 visual tokens to input into
+MiniMind-V.  
+After obtaining the image encoder features, the integration with the LLM requires aligning the 768-dimensional visual
+tokens with the LLM's text tokens, and mapping the image features into the same space as text embeddings. In other
+words, the image features and native visual tokens cannot be directly treated the same; they require cross-modal feature
+alignment.  
+[LlaVA-1](https://arxiv.org/pdf/2304.08485) uses a simple unbiased linear transformation to achieve this, with great
+success, and MiniMind-V does the same.
 
 ![llava-structure](./images/llava-structure.png)
 
-With this, the internal structural changes of MiniMind-V have been presented.
+With that, the internal structural changes of MiniMind-V are now fully presented.
+
+</details>
+
 
 ---
 
-Next, we briefly discuss the changes in the external input and output of MiniMind-V.
+Next, let's briefly discuss the changes in the external input and output of MiniMind-V.
 
-The input for VLM is still a piece of text, which includes a special <image> placeholder.
-After computing the text embedding, the vector generated by the image encoder can be projected into the part of the embedding corresponding to the placeholder, replacing the original placeholder embedding.
+The input to the VLM is still a segment of text containing special <image> placeholders.  
+After computing the text embedding, the vector generated by the image encoder can be projected onto the corresponding
+embedding part of the placeholder, replacing the original placeholder embedding.  
 For example:
 
 ```text
-<image>\nWhat is the content of this image?
+<image>\nWhat is in this image?
 ```
 
-minimind-v uses a 50-character `<<<...>>>` placeholder to replace the image,
-the reason for 50 characters was mentioned earlier:
-any image is encoded by the clip model into 50×768 dimensional tokens.
-Therefore, the prompt for minimind-v:
+In `minimind-v`, the image is replaced by a 196-character `@@@...@@@` placeholder. The reason for using 196 characters
+is explained earlier:  
+Any image is encoded by the Clip model as 196×768-dimensional tokens,  
+thus the `minimind-v` prompt becomes:
 
 ```text
-<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>\nWhat is the description of this picture?
+@@@......@@@\nWhat is this image describing?
 ```
 
-After computing the embedding and projection, and replacing the image part tokens, 
-the entire computation process to output is no different from the LLM part.
+After calculating the embedding and projection, and replacing the image token part, the entire calculation process to
+output is no different from that of the LLM part.
 
 ![input](./images/minimind-v-input.png)
 
-The method of implementing multi-graph processing is achieved by injecting multiple `<image>` placeholders, without the need to modify any framework.
-
-> ps: The only point worth noting is that if there are different numbers of images inserted in different conversations during training, you need to use empty features to pad the shorter features (corresponding to [line 267 of the dataset](./model/dataset.py#L267)) to ensure they can be read by the dataloader in the same size.
-
-> pps: This does not need to be done in the prompt; the placeholders are still injected based on the number of images inserted. Therefore, the input feature given to the LLM will not be affected by the padded features.
+For handling multiple images at once, this can be achieved by injecting multiple `<image>` placeholders without needing
+to modify the framework at all.
 
 <details>
-<summary> Considerations for Implementing Video Understanding Capabilities </summary>
+<summary> Expansion Ideas for Video Understanding </summary>
 
-For the video understanding capabilities of multi-modal large models, a feasible approach is to refer to the existing Python example for video understanding in MiniCPM-V 2.6.
-The main idea is to extract key frames from the video and then perform multi-graph inference.
-Therefore, if you want to add video understanding capabilities to MiniMind-V, you can build on the existing multi-graph training and refer to the method of extracting key frames in this Python script, then increase the number of images supported in the training files.
-The more MAX_NUM_FRAMES supported, the larger the memory consumption.
+written by [@xinyanghuang7](https://github.com/xinyanghuang7)
 
-```python
+For the video understanding capabilities of multimodal large models, one feasible approach is to refer to the existing
+MiniCPM-V 2.6 Python example for video understanding.
+The main idea is to extract key frames from the video and then perform multi-image inference.
+Therefore, if you want to add video understanding capabilities to MiniMind-V, you can base it on the existing
+multi-image training, refer to the key frame extraction method in this Python script, and increase the number of images
+supported in the training files.
+The more MAX_NUM_FRAMES supported, the more GPU memory it will consume.
+
+```text
 import torch
 from PIL import Image
 from transformers import AutoModel, AutoTokenizer
-from decord import VideoReader, cpu    # pip install decord
+from decord import VideoReader, cpu  # pip install decord
 
 model = AutoModel.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True,
-    attn_implementation='sdpa', torch_dtype=torch.bfloat16) # sdpa or flash_attention_2, no eager
+                                  attn_implementation='sdpa',
+                                  torch_dtype=torch.bfloat16)  # sdpa or flash_attention_2, no eager
 model = model.eval().cuda()
 tokenizer = AutoTokenizer.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True)
 
-MAX_NUM_FRAMES=64 # if cuda OOM set a smaller number
+MAX_NUM_FRAMES = 64  # if cuda OOM set a smaller number
+
 
 def encode_video(video_path):
     def uniform_sample(l, n):
@@ -353,17 +424,18 @@ def encode_video(video_path):
     print('num frames:', len(frames))
     return frames
 
-video_path="video_test.mp4"
+
+video_path = "video_test.mp4"
 frames = encode_video(video_path)
 question = "Describe the video"
 msgs = [
-    {'role': 'user', 'content': frames + [question]}, 
+    {'role': 'user', 'content': frames + [question]},
 ]
 
 # Set decode params for video
 params = {}
 params["use_image_id"] = False
-params["max_slice_nums"] = 2 # If cuda OOM and video resolution is greater than 448*448, set to 1
+params["max_slice_nums"] = 2  # If cuda OOM and video resolution is greater than 448*448, set to 1
 
 answer = model.chat(
     image=None,
@@ -373,229 +445,215 @@ answer = model.chat(
 )
 print(answer)
 ```
+
 </details>
 
-<u>With this, all the details of MiniMind-V have been presented.</u>
-
-<u>The implementation of MiniMind-V did not reference any third-party code; it is based on MiniMind with minimal modifications, hence the code implementation is significantly different from models like LlaVA.
-The core changes between MiniMind-V and MiniMind do not exceed 100 lines, making it easy to get started.</u>
+At this point, all the details of `MiniMind-V` have been presented.
+The `MiniMind-V` model subclass completely inherits from `MiniMind`,
+and is generated with **minimal** changes based on the latter,
+with core algorithm modifications `< 50 lines`, making the migration difficulty very low.
+Therefore, there may be differences with models like `LlAVA`, but the overall idea remains consistent.
 
 # 📌 Experiment
 
-## Dataset
+## Ⅰ Dataset
 
-Source: [Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions)
-Contains approximately 600,000 pre-training images and <100,000 instruction fine-tuning images, derived from CC-3M and COCO 2014, with translated Q&A content for better support of the Chinese language. The dataset has been further resized, organized, and compressed.
+Source: [Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions)  
+Contains approximately 570,000 pre-trained images from CC-3M and COCO 2014;  
+[llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k)  
+Contains 300k instruction fine-tuning data and 150k images.  
+The Q&A content has been translated, with better support for Chinese, further organized and resized.
 
-Pre-training dataset format:
+(pretrain_vlm_data.jsonl) Pre-training dataset format:
 
-```json
+```json lines
 {
-  "id": "GCC_train_000644518",
-  "image": "GCC_train_000644518.jpg",
   "conversations": [
     {
-      "from": "human",
-      "value": "Write a brief but informative image summary.\n<image>"
+      "role": "user",
+      "content": "Provide a brief description of the given image.\n<image>"
     },
     {
-      "from": "gpt",
-      "value": "Adding saltwater to a metal pot with a black background, in slow motion fps"
+      "role": "assistant",
+      "content": "Olive oil is a healthy ingredient for free use."
     }
-  ]
+  ],
+  "image": "GCC_train_002582585.jpg"
 }
 ```
 
-Instruction fine-tuning dataset format:
+(sft_vlm_data.jsonl) Single image instruction fine-tuning dataset format:
 
-```json
+```json lines
 {
-  "id": "000000334872",
-  "image": "000000334872.jpg",
   "conversations": [
     {
-      "from": "human",
-      "value": "<image>\nAre people in the photo going downhill skiing or cross-country skiing?"
+      "role": "user",
+      "content": "What impact does the location of the alarm clock have on sleep quality?<image>"
     },
     {
-      "from": "gpt",
-      "value": "People in the photo are cross-country skiing in the forest because they are on a trail rather than on a steep slope."
+      "role": "assistant",
+      "content": "Place the digital alarm clock on the nightstand..."
     }
-  ]
+  ],
+  "image": "train-00000-of-00001_image_0_0.jpg"
 }
 ```
 
-Multi-graph Instruction Fine-tuning Dataset Format:
+(sft_vlm_data_multi.jsonl) Multi-image instruction fine-tuning dataset format:
 
-```json
+```json lines
 {
-    "id": "000000000000",
-    "image": "0.jpg, 1.jpg",
-    "conversations": [
-      {
-        "from": "human",
-        "value": "context: Source Image: <image> Target Image: <image> Instruction: What is the correct image edit instruction that can transform the source image to the target image?"
-      },
-      {
-        "from": "gpt",
-        "value": "take the people out of the back in the photo. Remove the two people behind the woman in the white dress and the man in the blue suit. remove people behind the couple in the centre"
-      }
-    ]
-  }
+  "conversations": [
+    {
+      "role": "user",
+      "content": "context: Source Image: <image> Target Image: <image> Instruction: What is the correct image edit instruction that can transform the source image to target image?<image>"
+    },
+    {
+      "role": "assistant",
+      "content": "take the people out of the back in the photo. Remove the two people behind the woman in the white dress and the man in the blue suit. remove people behind the couple in the center"
+    }
+  ],
+  "image": "0.jpg, 1.jpg"
+}
 ```
 
-```json
-{
-    "id": "000000013633",
-    "image": "27266.jpg, 27267.jpg",
-    "conversations": [
-      {
-        "from": "human",
-        "value": "<image>\n<image>\nName all the differences between these two birds."
-      },
-      {
-        "from": "gpt",
-        "value": "animal1 is brown with white tuft while animal2 is white with dark brown wings"
-      }
-    ]
-  }
-```
+<details>
+<summary> Data Description </summary>
 
-Notes:
-+ For instruction fine-tuning, only one round of conversation is retained, training a single-round conversation model to prevent small model performance from being dragged down by long texts.
-+ The multi-graph dataset is relatively small and contains English dialogues, with the dataset only including two-image comparison scenarios, so the fine-tuning effect is limited. Here, only a reference approach is provided.
+* The multi-image dataset is relatively small and contains English conversations, focusing only on scenes with two image
+  comparisons. Therefore, the fine-tuning effect is limited, and this is just one reference approach.
 
-Final dataset download link: [Baidu Netdisk](https://pan.baidu.com/s/1Nz36OBBvVBGEx-PwIb7ofg?pwd=6666) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)
-multi_image_dataset: [HuggingFace](https://hf-mirror.com/datasets/xinyanghuang/minimind-v_multi_image/tree/main)
+* `jsonl` contains textual instructions, and `images.zip` contains the corresponding image data (to be unzipped after
+  download).
 
-## Training
+</details>
 
-The pre-training learns general knowledge about images, such as what a deer or dog is, from 595K datasets.
+Dataset download
+link: ([ModelScope](https://www.modelscope.cn/datasets/gongjy/minimind-v_dataset) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))
 
-The instruction fine-tuning learns the real Q&A format for asking questions about images from 230K real dialogue datasets.
+## Ⅱ Training
 
-Two datasets are provided for multi-graph fine-tuning: the Image Transformation dataset and the Bird Comparison dataset, with lengths of 3.5k and 13.6k respectively, in real Q&A format.
+> train_pretrain_vlm
 
-`1-pretrain_vlm.py` executes pre-training, yielding `*_vlm_pretrain.pth` as the output weights of pre-training.
+Pre-training learns general image knowledge from a dataset of 595K samples, such as a deer is a deer, a dog is a dog.
 
-`2-sft_vlm.py` performs instruction fine-tuning, resulting in `*_vlm_sft.pth` as the output weights of instruction fine-tuning.
+> train_sft_vlm
 
-During training, the visual encoder, which is the CLIP model, is frozen, and only the Projection and LLM parts are fine-tuned.
+Instruction fine-tuning learns the real Q&A format for image-related questions from a dataset of 300K real
+conversations, which better aligns with human communication habits.
 
-> Pretrain 512+8 Model (Training Time and Loss Reference Chart)
-![input](./images/1-pretrain-512.png)
-> Pretrain 768+16 Model (Training Time and Loss Reference Chart)
-![input](./images/1-pretrain-768.png)
-> SFT 512+8 Model (Training Time and Loss Reference Chart)
-![input](./images/2-sft-512.png)
-> SFT 768+16 Model (Training Time and Loss Reference Chart)
-![input](./images/2-sft-768.png)
+> train_sft_vlm
 
-## Trained Model Weights
+Multi-image fine-tuning provides a demo: a bird comparison dataset with 13.6k real Q&A formats.
 
-(`.pth` weight files) Download link: [Baidu Netdisk](https://pan.baidu.com/s/1a7_C7HdCMfnG2Dia3q85FQ?pwd=6666)
+During training, the visual encoder, i.e., the CLIP model's gradients, are frozen, and only the Projection and LLM parts
+are trained.  
+In pre-training, only the last layer parameters of Projection and LLM are learnable.  
+In instruction fine-tuning, all parameters of Projection and LLM are learnable.
 
-(`transformers` model files)
-Download link: [HuggingFace](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d)
+> Training Time and Loss Trend (for reference only)
 
-> Note: HuggingFace versions are all post-instruction fine-tuned MiniMind-V models
+Pretrain [512+8] & [768+16]  
+![input](./images/pretrain_loss.png)
 
-| Model Name             | params | Config                      | file_name                                           |
-|------------------------|--------|-----------------------------|-----------------------------------------------------|
-| minimind-v-v1-small    | 27M    | d_model=512<br/>n_layers=8  | Pre-trained: 512_vllm_pretrain.pth<br/>Fine-tuned: 512_vllm_sft.pth |
-| minimind-v-v1          | 109M   | d_model=768<br/>n_layers=16 | Pre-trained: 768_vllm_pretrain.pth<br/>Fine-tuned: 768_vllm_sft.pth |
+SFT [512+8] & [768+16]  
+![input](./images/sft_loss.png)
+
+## Ⅲ Model Weights
+
+(Native PyTorch `*.pth` weight files) Download link:  
+([ModelScope](https://www.modelscope.cn/models/gongjy/MiniMind2-V-PyTorch) | [HuggingFace](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch))
+
+(`Transformers` format models)  
+Download link:  
+([ModelScope](https://www.modelscope.cn/profile/gongjy) | [HuggingFace](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d))
+
+> Note: The Transformers version is the `MiniMind-V` model after single-image instruction fine-tuning
 
 # 📌 Test
 
-### Effectiveness Testing
+### Effect Test
 
-#### Single-image conversation
+#### Single Image Dialogue
 
 <table>
   <thead>
     <tr>
       <th>Image</th>
-      <th>512_pretrain</th>
-      <th>512_sft</th>
-      <th>768_pretrain</th>
-      <th>768_sft</th>
+      <th>MiniMind2-V</th>
+      <th>MiniMind2-V-Small</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><img src="./dataset/eval_images/一个女子.png" alt="a-girl.png" style="width: 200px;"></td>
-      <td>Hair and makeup, I like her natural hair!</td>
-      <td>This picture depicts a young woman, she is wearing a suit, and a tie, which indicates that she may be attending a special fashion event or celebration.</td>
-      <td>A human-made actor's adventure movie.</td>
-      <td>This picture portrays a portrait of a woman, who is wearing a pink dress.</td>
+      <td>
+        <img src="./dataset/eval_images/城市车水马龙-city-traffic.jpg" alt="city-traffic">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The image shows a busy city street with tall buildings on both sides of a long road. The street is packed with cars, trucks, and buses, along with many other vehicles driving on the road. There are many cars visible on the street, some driving at high speed, while others are parked at the side. Additionally, there is a bus parked on the right side of the street. Traffic lights are visible on the street, indicating a busy city environment.</td>
+      <td>The image depicts a bustling urban scene with several cars and a truck driving down the city street. There are many traffic lights visible, some on the left side of the street, and others on the right. Several pedestrians can be seen on the street, some standing closer to the road while others are farther away. A parking sign is located on the left side of the image, hinting at the city environment. Two cars are visible on the street, one on the right and the other on the left, with another one also on the left side. This image captures a typical day in a city environment.</td>
     </tr>
     <tr>
-      <td><img src="./dataset/eval_images/一个海星.png" alt="a-starfish.png"></td>
-      <td>Fossils in water, a still line composed of a ring of fossil clusters.</td>
-      <td>The picture shows a large octopus, a potential marine creature, it is either on the surface of the water or in the ocean.</td>
-      <td>Starfish and tentacles.</td>
-      <td>The picture shows a starfish on the beach, including the starfish, and an underwater object.</td>
+      <td>
+        <img src="./dataset/eval_images/太空宇航员-Astronaut-Space.jpg" alt="astronaut">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The image shows an astronaut in a spacesuit sitting in a large spacecraft. They appear to be embarking on or disembarking from a space mission. Behind the astronaut, there is a rocket launch platform, likely to support the astronaut's mission during the journey. Additionally, an aircraft is parked near a hangar, further suggesting this is an aviation event. There are a few people around the aircraft, some standing close, possibly observing or waiting for the spacecraft to prepare for takeoff.</td>
+      <td>The scene shows a soldier wearing a helmet standing on a large airplane. This aircraft appears to be a military one, likely preparing to board another plane. Another person stands in front, possibly observing the flight process. There are several people around the airplane, some standing on the left side, others on the right. They seem to be watching the pilot's performance. Additionally, a truck is parked near the left side, likely to observe the flight process more closely.</td>
     </tr>
     <tr>
-      <td><img src="./dataset/eval_images/一个熊.png" alt="a-bear.png"></td>
-      <td>In the wild, in the valley.</td>
-      <td>The picture features plants and a grizzly bear sitting on the grass.</td>
-      <td>A close-up of a grizzly bear</td>
-      <td>The picture shows a grizzly bear standing in an open field of grass, surrounded by trees and bushes, with a backpack placed on top of it.</td>
+      <td>
+        <img src="./dataset/eval_images/小狗美女海边-Dog-Woman-Sea.jpg" alt="dog-woman-sea">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The image shows a woman sitting on the beach, holding a white dog in her hands. She appears to be a woman sitting on the sand, looking at her. A dog is also sitting beside her, looking relaxed and comfortable. Other beachgoers are scattered across the beach, some sitting, while others are farther away. A boat can be seen in the background, indicating that this is a popular beach destination for tourists.</td>
+      <td>Two people are sitting on the beach, one lounging lazily on the sand, while the other is sitting. They seem to be enjoying their time by the sea. There are a few beach chairs, one close to the left side of the sand, another in the middle. Additionally, a dog is lying on the sand, adding to the relaxed atmosphere of the scene.</td>
     </tr>
     <tr>
-      <td><img src="./dataset/eval_images/一些海豚.png" alt="some-dolphins.png"></td>
-      <td>A group of tourists watched this movie.</td>
-      <td>This picture depicts a flock of seagulls flying over the water, on the water. The presence of seagulls suggests that they are looking for food. Seagulls nest on the water, possibly to protect themselves from potential dangers, such as sharp teeth and reptiles of seagulls.</td>
-      <td>A group of dolphins or sheep fishing by boat during a day's voyage</td>
-      <td>This picture shows a group of people swimming among a large group of dolphins and dolphins nearby.</td>
+      <td>
+        <img src="./dataset/eval_images/彩虹瀑布-Rainbow-Falls.jpg" alt="rainbow-falls">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The photo captures a beautiful natural scene with high mountains in the background. By the water, a large fountain spans across the surface, attracting many visitors. There are several people on the water's surface, some standing or sitting around the fountain, while others walk in the water. Overall, this image portrays a beautiful and peaceful environment where people can enjoy scenic views of nature.</td>
+      <td>Under a beautiful blue sky, a massive white waterfall hangs above with a huge stream of wet water. This waterfall is located on a mountain, adding a charming and serene atmosphere to the whole scene. In the background of this image, several boats can be seen, some near the water's edge, others farther away. These boats seem to be preparing for scenic or outdoor activities.</td>
     </tr>
     <tr>
-      <td><img src="./dataset/eval_images/三个女孩.png" alt="three-girls.png"></td>
-      <td>A girl and her friends are sitting on a bench, wearing long white robes.</td>
-      <td>This scene depicts a vibrant young girl, they are dressed in black and white attire, standing in the middle of a crowd, all of whom are also dressed in black and white, indicating their outfits are lively and elegant. In the scene, there are two girls in the background, a woman behind, and another woman standing, all wearing black clothes. This suggests they are enjoying their outfits and attire, possibly attending a special festival or celebration.</td>
-      <td>The girls are on the city streets.</td>
-      <td>This picture portrays a man and a woman in traditional clothing, standing next to them, they are spending family time together. Throughout the scene, you can see a little boy and a girl, both wearing cowboy hats, which suggests they are participating in a family gathering, which could be a party or celebration, or they might be discussing an interesting activity or event.</td>
+      <td>
+        <img src="./dataset/eval_images/椅子老人看书-Chair-Elderly-Reading.jpg" alt="elderly-reading">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The image shows a man sitting on a park bench next to a green chair. There is an open book beside him with the words "reading" written on it, suggesting he may be reading. The park has a bench and a park seat, adding life to the surrounding environment. There are several cars and a truck nearby, indicating this is a public space. Additionally, a person can be seen standing at different locations in the park, possibly waiting to cross the road or walk further.</td>
+      <td>An elderly person wearing shorts sits on a park bench surrounded by trees. He seems to be reading a book, possibly engaged in reading. In the background, there is another bench providing ample seating for the scene. You can also see a chair and a table in the background, suggesting this may be an outdoor seating area where people can relax.</td>
     </tr>
     <tr>
-      <td><img src="./dataset/eval_images/两头鹿.png" alt="two-deer.png"></td>
-      <td>This photo contains several deer.</td>
-      <td>This picture captures a white-tailed deer, sitting on the grass, using its photo to capture a red deer.</td>
-      <td>The animal looks as if it is about to hide behind a tree, he looks majestic, as he cannot control himself.</td>
-      <td>This picture depicts a doe and a deer, the doe is standing in the woods, a sheep, and a deer.</td>
+      <td>
+        <img src="./dataset/eval_images/熊猫草地-Panda-Grassland.jpg" alt="panda-grassland">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The image shows a white brown bear sitting on the grass, next to a large bear with brown spots. This bear seems shy or playful as it lies on the grass, resting and looking relaxed.</td>
+      <td>In this image, a brown bear is strolling on the grass. The bear occupies much of the frame, seemingly walking in its natural environment on the grass. In the background, there are several trees, adding natural elements to the scene. A bird is flying near the middle of the scene, bringing a lively atmosphere to the image.</td>
     </tr>
     <tr>
-      <td><img src="./dataset/eval_images/两朵红花.png" alt="two-red-flowers.png"></td>
-      <td>The bouquet's flowers have barely bloomed.</td>
-      <td>The picture shows red and yellow flowers, which are called "vase".</td>
-      <td>The flower heads are close together.</td>
-      <td>The picture shows red flowers, surrounded by several roses.</td>
+      <td>
+        <img src="./dataset/eval_images/自行车鲜花-Bicycle-Flowers.jpg" alt="bicycle-flowers">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The image shows a beautiful vase filled with colorful flowers and bouquets. The bouquets are scattered throughout the vase, creating a visually pleasant scene. The colorful flowers in the vase create a delightful visual. These flowers are placed on a table, likely displayed to showcase their beauty.</td>
+      <td>The scene shows a green and purple bicycle parked next to a building, placed near a large tree. This bicycle is situated nearby, adding some color to the scene. In addition to the bicycle, there are other bicycles, including one in the foreground and another near the center of the background. The presence of the bicycles suggests they may be parked there.</td>
     </tr>
     <tr>
-      <td><img src="./dataset/eval_images/太空宇航员.png" alt="an-astronaut.png"></td>
-      <td>An astronaut posing with Earth during a space mission.</td>
-      <td>This image depicts a dynamic moon, walking on the moon.</td>
-      <td>An astronaut resting in a cradle during a mission, with his team in the background.</td>
-      <td>This picture portrays an astronaut in the image of a space station.</td>
-    </tr>
-    <tr>
-      <td><img src="./dataset/eval_images/老虎在水里.png" alt="a-tiger-in-water.png"></td>
-      <td>A tiger in the water looking at the camera.</td>
-      <td>The picture shows a large brown seal swimming in the water, resting in the water.</td>
-      <td>A tiger caged in a zoo</td>
-      <td>The picture shows a small bear, lying on a branch of a tree.</td>
-    </tr>
-    <tr>
-      <td><img src="./dataset/eval_images/豹子在悬崖.png" alt="a-leopard-on-cliff.png"></td>
-      <td>This is an endangered species.</td>
-      <td>In the picture, a black and white cat is walking on the rocks.</td>
-      <td>A leopard in the wild on the rocks outside a cave, at sunrise</td>
-      <td>This picture shows a red panda walking on the rocks.</td>
+      <td>
+        <img src="./dataset/eval_images/舞蹈-dance.jpg" alt="dance">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The woman in the image is wearing a white dress with a black tennis skirt. She is performing a tennis match, likely part of the competition. Several chairs are visible in the background, possibly set up for the audience or other spectators. Additionally, a bench is placed on the left side of the scene, providing a place for people to rest.</td>
+      <td>A woman in white clothing stands on a stage holding a white frisbee. She seems to be participating in a stage dance or competition. Several other people are present in the scene, one standing on the left side of the stage, another on the right, and a third person standing near the right of the venue. The stage has several spectators, some standing, others sitting, with some remaining standing. This appears to be a joyful festival or event.</td>
     </tr>
   </tbody>
 </table>
 
-#### Multi-image conversation
+#### Multiple Image Dialogue (Effect is Limited)
 
 <table>
   <thead>
@@ -603,72 +661,40 @@ Download link: [HuggingFace](https://huggingface.co/collections/jingyaogong/mini
       <th>Image1</th>
       <th>Image2</th>
       <th>512_sft_multi</th>
+      <th>768_sft_multi</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><img src="./dataset/eval_multi_images/bird/0.jpg" alt="a-bird.png" style="width: 200px;"></td>
-      <td><img src="./dataset/eval_multi_images/bird/1.jpg" alt="a-bird.png" style="width: 200px;"></td>
-      <td>animal1 has a brown and black head with a black and white striped head . animal2 has a black head with a white stripe on its wings .</td>
+      <td><img src="./dataset/eval_multi_images/bird/0.jpg" alt="a-bird.png"></td>
+      <td><img src="./dataset/eval_multi_images/bird/1.jpg" alt="a-bird.png"></td>
+      <td>This image displays a bird scenario: a woman standing with a red and green mixed purple bird perched on her. The woman stands with the bird on her shoulders, while the red bird on her collar stands behind her.</td>
+      <td>The two birds are flying in the same forest, some are in the center of the image, while others are smaller, creating a contrast. The birds’ presence highlights their flight ability and adaptability as they swiftly move through the woods. Additionally, the birds’ positions vary, with one on the left and the other on the right, indicating they are moving close within the same forest. Their natural behavior helps distinguish the two bird species.</td>
     </tr>
   </tbody>
 </table>
 
+### Effect Summary:
 
-### Start Inference
+Visual signals are treated as a special foreign language by LLMs, so the "language learning" ability highly depends on
+the LLM's capacity. The stronger the LLM, the more powerful the corresponding VLM, and the performance boost becomes
+significant.
 
-```bash
-python web_server.py
+#### Future Areas for Improvement:
+
+```text
+> Simpler projection-based cross-modal feature alignment, which may be inferior compared to Cross-Attention.
+> The Clip model could try larger, more powerful large series for finer-grained token representations of image features, as they are still coarse.
+> The resolution is not high, theoretically only 224×224 (the minimind-v dataset is set to 128×128 for space saving).
+> ...
 ```
-
-![web_server1](./images/web_server1.png)
-![web_server2](./images/web_server2.png)
-
-### Summary of Effects
-
----
-Based on the provided table data, the performance of the four models can be summarized as follows:
-
-1. **512_pretrain**:
-    - **Brief and inaccurate descriptions**: Most descriptions fail to clearly convey the image content, often providing unrelated narratives. For example, the starfish image is described as "fossils in water," which is far off the mark.
-    - **Lack of detail**: In most cases, only simple, vague descriptions are given, failing to delve into the details or context of the image. For instance, for the tiger image, it simply says "looking at the camera in the water."
-
-2. **512_sft**:
-    - **More specific descriptions**: Compared to 512_pretrain, 512_sft provides more detailed explanations and attempts to capture specific elements of the scene. For example, when describing the woman image, it mentions "suit" and "tie," giving a clearer depiction.
-    - **Occasional errors or redundancy**: Some descriptions are overly complex or even irrelevant to the image, such as mentioning seagulls, nesting, etc., in the dolphin image, which are not related.
-
-3. **768_pretrain**:
-    - **Incoherent information**: The performance of this model is quite scattered, with descriptions often being vague and incomplete. For example, in describing the woman image, it only mentions "a human-made actor's adventure movie," without clearly explaining the image content.
-    - **Partially accurate but with less overall information**: Some descriptions, although relevant to the image, are very brief. For example, the starfish description only states "starfish and tentacles," lacking a full sense of the scene.
-
-4. **768_sft**:
-    - **Comprehensive and specific descriptions**: This model's descriptions are the most detailed and precise among the four. For instance, when describing the bear image, it mentions "standing in an open field of grass, surrounded by trees and bushes, with a backpack," capturing multiple elements of the image.
-    - **Stronger comprehension ability**: This model can identify the scene and context of the image, providing reasonable interpretations and speculations. For example, describing a "family gathering" or "celebration" gives the image a more contextual connection.
-
-### GPT=4o Summary:
-
-- **512_pretrain** performs the worst, with simple and inaccurate descriptions.
-- **512_sft** has improved detail in descriptions but occasionally includes irrelevant information.
-- **768_pretrain** has poor coherence in information, yet provides basic descriptions in some aspects.
-- **768_sft** performs the best, offering detailed, accurate descriptions, and is able to make good context-based inferences.
-
-### Personal Summary:
-
-- Visual signals are a special kind of foreign language for LLMs, so the ability to "learn foreign languages" largely depends on the capabilities of the LLM.
-- The stronger the performance of the LLM, the stronger the corresponding VLM will be, and the performance gain will be significant.
-- Areas for improvement:
-  - Simpler projection methods for cross-modal feature alignment result in greater performance loss compared to Cross-Attention.
-  - Larger and more powerful large-series Clip models can be tried, using more fine-grained token representations for image features, which are currently very rough.
-  - The resolution is not high, theoretically only 224×224 (minimind-v dataset is set to 128×128 to save space).
-  - ...
-
----
 
 # 📌 Acknowledge
 
 > [!TIP]
 > If you find `MiniMind-V` helpful, please consider giving it a ⭐ on GitHub. <br/>
-> Given the limited expertise, there may be unknown issues, and we welcome everyone to discuss, correct, or submit PRs to improve the project in Issues. <br/>
+> Given the limited expertise, there may be unknown issues, and we welcome everyone to discuss, correct, or submit PRs
+> to improve the project in Issues. <br/>
 > Your support is the driving force behind continuous improvements to the project. Thank you!
 
 ## 🤝 [Contributors](https://github.com/jingyaogong/minimind/graphs/contributors)
@@ -695,7 +721,6 @@ Based on the provided table data, the performance of the four models can be summ
 
 </details>
 
-
 ## 🫶Supporter
 
 <a href="https://github.com/jingyaogong/minimind-v/stargazers">
@@ -719,7 +744,6 @@ Based on the provided table data, the performance of the four models can be summ
   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=jingyaogong/minimind-v&type=Date"/>
   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=jingyaogong/minimind-v&type=Date"/>
 </picture>
-
 
 # License
 
