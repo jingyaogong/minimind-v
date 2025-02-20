@@ -27,8 +27,8 @@
 
 </div>
 
-* This project aims to train a super-small multimodal vision-language model, **MiniMind-V**, with just a cost of 3 RMB
-  and 2 hours of work, starting from scratch!
+* This project aims to train a super-small multimodal vision-language model, **MiniMind-V**, with just a cost of 1.3 RMB
+  and 1 hours of work, starting from scratch!
 * The smallest version of **MiniMind-V** is only about $\frac{1}{7000}$ the size of GPT-3, designed to enable fast
   inference and even training on personal GPUs.
 * **MiniMind-V** is an extension of the visual capabilities of the [MiniMind](https://github.com/jingyaogong/minimind)
@@ -40,8 +40,8 @@
 * The hope is that this project can provide a useful example to inspire others and share the joy of creation, helping to
   drive progress in the wider AI community!
 
-> To avoid misunderstandings, the "2 hours" is based on testing (`1 epoch`) with an NVIDIA 3090 hardware device (single GPU), and
-> the "3 RMB" refers to GPU server rental costs. 
+> To avoid misunderstandings, the "1 hours" is based on testing (`1 epoch`) with an NVIDIA 3090 hardware device (single GPU), and
+> the "1.3 RMB" refers to GPU server rental costs. 
 
 <div align="center">
 
