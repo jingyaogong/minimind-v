@@ -74,7 +74,7 @@ class MiniMindVLM(MiniMindLM):
         if vision_tensors is not None and image_indices:
             vision_proj = self.vision_proj(vision_tensors)
             if len(vision_proj.shape) == 3:
-                vision_proj = vision_proj.unsqueeze(1)
+                vision_proj = vision_proj.unsqueeze(0)
             new_h = []
             for i in range(h.size(0)):
                 if i in image_indices:
