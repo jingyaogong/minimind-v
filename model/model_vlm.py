@@ -3,7 +3,7 @@ from .model import *
 from typing import Optional, Tuple, List
 from torch import nn
 import warnings
-from transformers import CLIPProcessor, CLIPModel
+from transformers import CLIPProcessor, CLIPVisionModel
 import torch
 
 warnings.filterwarnings('ignore')
@@ -36,7 +36,7 @@ class MiniMindVLM(MiniMindLM):
 
     @staticmethod
     def get_vision_model(model_path="./model/vision_model/clip-vit-base-patch16"):
-        model = CLIPModel.from_pretrained(model_path)
+        model = CLIPVisionModel.from_pretrained(model_path)
         processor = CLIPProcessor.from_pretrained(model_path)
         # 冻结 vision_encoder 的所有参数
         for param in model.parameters():
@@ -52,7 +52,7 @@ class MiniMindVLM(MiniMindLM):
     @staticmethod
     def get_image_embeddings(image_tensors, vision_model):
         with torch.no_grad():
-            outputs = vision_model.vision_model(pixel_values=image_tensors)
+            outputs = vision_model(pixel_values=image_tensors)
         img_embedding = outputs.last_hidden_state[:, 1:, :].squeeze()
         return img_embedding
 
