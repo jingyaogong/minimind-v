@@ -189,7 +189,7 @@ skipping the pretrain training step and proceed directly to SFT training.
 **3.1 Pretraining (Learning image description)**
 
 ```bash
-python train_pretrain_vlm.py --epochs 4
+bash scripts/pretrain_vlm.sh
 ```
 
 > Run pretraining to get `pretrain_vlm_*.pth` as the pretrained model's output weights (* represents the model
@@ -198,7 +198,7 @@ python train_pretrain_vlm.py --epochs 4
 **3.2 Supervised Fine-Tuning (Learning image-caption dialogue style)**
 
 ```bash
-python train_sft_vlm.py --epochs 4
+bash scripts/sft_vlm.sh
 ```
 
 > Perform supervised fine-tuning to get `sft_vlm_*.pth` as the output weights for the fine-tuned model.

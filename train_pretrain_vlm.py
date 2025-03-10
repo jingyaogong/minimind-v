@@ -104,8 +104,8 @@ def init_model(model_config: VLMConfig):
     # 加载纯语言模型权重
     ckp = f'./out/lm_{model_config.dim}{moe_path}.pth'
     model = MiniMindVLM(model_config)
-    state_dict = torch.load(ckp, map_location=args.device)
-    model.load_state_dict(state_dict, strict=False)
+    # state_dict = torch.load(ckp, map_location=args.device)
+    # model.load_state_dict(state_dict, strict=False)
 
     # 冻结除 vision_proj 外的所有参数
     for name, param in model.named_parameters():
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_wandb", default=False, action="store_true")
     parser.add_argument("--wandb_project", type=str, default="MiniMind-V")
     parser.add_argument("--num_workers", type=int, default=8)
-    parser.add_argument("--data_path", type=str, default="./dataset/pretrain_vlm_data.jsonl")
+    parser.add_argument("--data_path", type=str, default="./dataset/pretrain_data.jsonl")
     parser.add_argument("--images_path", type=str, default="./dataset/pretrain_images")
     parser.add_argument("--ddp", action="store_true")
     parser.add_argument("--accumulation_steps", type=int, default=1)

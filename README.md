@@ -178,7 +178,7 @@ print(torch.cuda.is_available())
 **3.1 预训练（学图像描述）**
 
 ```bash
-python train_pretrain_vlm.py --epochs 4
+bash scripts/pretrain_vlm.sh
 ```
 
 > 执行预训练，得到 `pretrain_vlm_*.pth` 作为预训练的输出权重（其中*为模型的dimension，默认为512）
@@ -187,7 +187,7 @@ python train_pretrain_vlm.py --epochs 4
 **3.2 监督微调（学看图对话方式）**
 
 ```bash
-python train_sft_vlm.py --epochs 4
+bash scripts/sft_vlm.sh
 ```
 
 > 执行监督微调，得到 `sft_vlm_*.pth` 作为指令微调的输出权重
