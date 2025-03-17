@@ -103,21 +103,18 @@ class VLMDataset(Dataset):
         return X, Y, loss_mask, image_tensors
 
 class T2IDataset(Dataset):
-    def __init__(self, jsonl_path, images_path, tokenizer, max_length=512,
+    def __init__(self, jsonl_path, images_path, tokenizer, max_length=512, img_pre_process=False,
                  image_special_token='@' * 256):
 
         super().__init__()
         self.samples = self.load_data(jsonl_path)
         self.images_path = images_path
 
+        self.img_pre_process = img_pre_process # 是否使用提前处理的图片
+
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.image_size = 256
-        self.transform = transforms.Compose([
-            transforms.Lambda(lambda pil_image: center_crop_arr(pil_image, self.image_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
-            ])
         self.image_token = image_special_token
         self.bos_id = tokenizer('<s>assistant\n', add_special_tokens=False).input_ids
         self.eos_id = tokenizer('</s>\n', add_special_tokens=False).input_ids
@@ -172,14 +169,28 @@ class T2IDataset(Dataset):
 
         X = torch.tensor(input_ids[:-1], dtype=torch.long)
         Y = torch.tensor(input_ids[1:], dtype=torch.long)
-        loss_mask = torch.tensor(loss_mask[1:], dtype=torch.long)
+        loss_mask = torch.tensor(loss_mask[1:], dtype=torch.long) 
 
-        image_tensors = []
-        for image_name in image_paths.split(','):
-            image_name = image_name.strip()
-            image = Image.open(f'{self.images_path}/{image_name}')
-            image_tensor = self.transform(image)
-            image_tensors.append(image_tensor)
-        image_tensors = torch.stack(image_tensors, dim=0)   
+        if self.img_pre_process:
+            image_emb_path = image_paths.replace('.jpg', '_emb.npy')
+            image_emb = np.load(f'{self.images_path}/{image_emb_path}')
+            image_emb = torch.tensor(image_emb, dtype=torch.float32)
+            # 加载预处理的图像token
+            image_token_path = image_paths.replace('.jpg', '_token.npy')
+            image_token = np.load(f'{self.images_path}/{image_token_path}')
+            image_token = torch.tensor(image_token, dtype=torch.long)
+            return X, Y, loss_mask, (image_emb, image_token)
+        else:
+            image_tensors = []
+            for image_name in image_paths.split(','):
+                image_name = image_name.strip()
+                image = Image.open(f'{self.images_path}/{image_name}').convert("RGB")
+                image = center_crop_arr(image, self.image_size)
+                image = np.array(image) / 255.
+                image = 2.0 * image - 1.0
+                image = torch.tensor(image, dtype=torch.float32)
+                image_tensor = torch.einsum('hwc->chw', image)
+                image_tensors.append(image_tensor)
+            image_tensors = torch.stack(image_tensors, dim=0)   
 
-        return X, Y, loss_mask, image_tensors
+            return X, Y, loss_mask, image_tensors

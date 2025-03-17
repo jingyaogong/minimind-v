@@ -39,13 +39,14 @@ def train_epoch(epoch, wandb):
         X = X.to(args.device)
         Y = Y.to(args.device)
         loss_mask = loss_mask.to(args.device)
-        pixel_tensors = pixel_tensors.to(args.device)
+        pixel_tensors = pixel_tensors
         lr = get_lr(epoch * iter_per_epoch + step, args.epochs * iter_per_epoch, args.learning_rate)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
         with ctx:
             res = model(X, Y, pixel_tensors=pixel_tensors)
+            Y = res.target_ids
             loss = loss_fct(
                 res.logits.view(-1, res.logits.size(-1)),
                 res.target_ids.view(-1)
@@ -147,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_project", type=str, default="MiniMind-V")
     parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--data_path", type=str, default="./dataset/pretrain_t2i_data.jsonl")
-    parser.add_argument("--images_path", type=str, default="./dataset/pretrain_images")
+    parser.add_argument("--images_path", type=str, default="./dataset/pretrain_t2i_code")
     parser.add_argument("--ddp", action="store_true")
     parser.add_argument("--accumulation_steps", type=int, default=1)
     parser.add_argument("--grad_clip", type=float, default=1.0)
@@ -159,6 +160,7 @@ if __name__ == "__main__":
     parser.add_argument('--n_layers', default=8, type=int)
     parser.add_argument('--max_seq_len', default=640, type=int)
     parser.add_argument('--use_moe', default=False, type=bool)
+    parser.add_argument('--img_process', type=bool, default=True)
     args = parser.parse_args()
 
     model_config = VLMConfig(dim=args.dim, n_layers=args.n_layers, max_seq_len=args.max_seq_len,
@@ -189,9 +191,8 @@ if __name__ == "__main__":
 
     model, tokenizer = init_model(model_config)
 
-    train_ds = T2IDataset(args.data_path, args.images_path, tokenizer,
-                          image_special_token=model_config.image_special_token,
-                          max_length=max_seq_len)
+    train_ds = T2IDataset(args.data_path, args.images_path, tokenizer, max_seq_len, args.img_process,
+                          image_special_token=model_config.image_special_token)
     train_sampler = DistributedSampler(train_ds) if ddp else None
     train_loader = DataLoader(
         train_ds,

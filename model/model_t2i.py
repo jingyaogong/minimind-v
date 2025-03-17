@@ -3,12 +3,28 @@ from .model import *
 from typing import Optional, Tuple, List
 from torch import nn
 import warnings
-from model.model_vlm import MiniMindVLM, VisionProj
+from model.model_vlm import MiniMindVLM
 from model.model_vq import VQ_models
 import torch
 from einops import rearrange
 
 warnings.filterwarnings('ignore')
+
+class VisionProj(nn.Module):
+    def __init__(self, ve_dim=768, lm_dim=512, hidden_dim=256):
+        super().__init__()
+        self.ve_dim = ve_dim
+        self.lm_dim = lm_dim
+        self.hidden_dim = hidden_dim
+        self.vision_proj = nn.Sequential(
+            nn.Linear(self.ve_dim, self.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim, self.lm_dim)
+        )
+
+    def forward(self, image_encoders):
+        vision_proj = self.vision_proj(image_encoders)
+        return vision_proj
 
 
 # 继承自语言模型
@@ -20,14 +36,12 @@ class MiniMindT2I(MiniMindVLM):
         if not params: params = VLMConfig()
         self.params = params
         self.image_tokenizer = self.__class__.get_image_tokenizer()
-        # 这里重写是为了将output映射到codebook_size
-        self.output = nn.Linear(params.dim, 16384, bias=False)
         self.vision_proj = VisionProj(ve_dim=8, lm_dim=params.dim)
 
     @staticmethod
-    def get_image_tokenizer(model_path="./model/minimind_img_tokenizer/vq_ds16_t2i.pt"):
+    def get_image_tokenizer(model_path="./model/minimind_img_tokenizer/minimind_img_tokenizer.pt"):
         model = VQ_models['VQ-16'](
-            codebook_size=16384,
+            codebook_size=6400,
             codebook_embed_dim=8)
         
         # 加载模型
@@ -105,23 +119,31 @@ class MiniMindT2I(MiniMindVLM):
         h = self.tok_embeddings(input_ids)
 
         if pixel_tensors is not None and start_pos == 0:
-            if len(pixel_tensors.shape) == 6:
-                pixel_tensors = pixel_tensors.squeeze(2)
-            bs, num, c, im_h, im_w = pixel_tensors.shape
-            stack_dim = 1 if bs > 1 else 0
-            # 获取图片的embedding
-            vision_tensors = torch.stack([
-                MiniMindT2I.get_image_embeddings(pixel_tensors[:, i, :, :, :], self.image_tokenizer)[0]
-                for i in range(num)
-            ], dim=stack_dim)
-            h = self.count_vision_proj(tokens=input_ids, h=h, vision_tensors=vision_tensors, seqlen=input_ids.shape[1])
-            # 获取图片的token
-            vision_tokens = torch.stack([
-                MiniMindT2I.get_image_embeddings(pixel_tensors[:, i, :, :, :], self.image_tokenizer)[1]
-                for i in range(num)
-            ], dim=stack_dim)
-            # 替换target中的'@......'为图片的token
-            target_ids = self.count_token_replace(tokens=target_ids, vision_token=vision_tokens, seqlen=target_ids.shape[1])
+            if isinstance(pixel_tensors, torch.Tensor):
+                pixel_tensors = pixel_tensors.to(h.device)
+                if len(pixel_tensors.shape) == 6:
+                    pixel_tensors = pixel_tensors.squeeze(2)
+                bs, num, c, im_h, im_w = pixel_tensors.shape
+                stack_dim = 1 if bs > 1 else 0
+                # 获取图片的embedding
+                vision_tensors = torch.stack([
+                    MiniMindT2I.get_image_embeddings(pixel_tensors[:, i, :, :, :], self.image_tokenizer)[0]
+                    for i in range(num)
+                ], dim=stack_dim)
+                h = self.count_vision_proj(tokens=input_ids, h=h, vision_tensors=vision_tensors, seqlen=input_ids.shape[1])
+                # 获取图片的token
+                vision_tokens = torch.stack([
+                    MiniMindT2I.get_image_embeddings(pixel_tensors[:, i, :, :, :], self.image_tokenizer)[1]
+                    for i in range(num)
+                ], dim=stack_dim)
+                # 替换target中的'@......'为图片的token
+                target_ids = self.count_token_replace(tokens=target_ids, vision_token=vision_tokens, seqlen=target_ids.shape[1])
+            else:
+                vision_tensors, vision_tokens = pixel_tensors
+                vision_tensors = vision_tensors.to(h.device)
+                vision_tokens = vision_tokens.to(h.device)
+                h = self.count_vision_proj(tokens=input_ids, h=h, vision_tensors=vision_tensors, seqlen=input_ids.shape[1])
+                target_ids = self.count_token_replace(tokens=target_ids, vision_token=vision_tokens, seqlen=target_ids.shape[1])
 
         pos_cis = self.pos_cis[start_pos:start_pos + input_ids.shape[1]]
         past_kvs = []
