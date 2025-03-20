@@ -87,7 +87,7 @@ def train_epoch(epoch, wandb):
         if (step + 1) % args.save_interval == 0 and (not ddp or dist.get_rank() == 0):
             model.eval()
             moe_path = '_moe' if model_config.use_moe else ''
-            ckp = f'{args.save_dir}/pretrain_t2i_{model_config.dim}{moe_path}.pth'
+            ckp = f'{args.save_dir}/sft_t2i_{model_config.dim}{moe_path}.pth'
             if isinstance(model, torch.nn.parallel.DistributedDataParallel):
                 state_dict = model.module.state_dict()
             else:
@@ -103,21 +103,10 @@ def init_model(model_config: VLMConfig):
     tokenizer = AutoTokenizer.from_pretrained('./model/minimind_tokenizer')
     moe_path = '_moe' if model_config.use_moe else ''
     # 加载纯语言模型权重
-    ckp = f'./out/lm_{model_config.dim}{moe_path}.pth'
+    ckp = f'./out/pretrain_t2i_{model_config.dim}{moe_path}.pth'
     model = MiniMindT2I(model_config)
-    # state_dict = torch.load(ckp, map_location=args.device)
-    # model.load_state_dict(state_dict, strict=False)
-
-    # 冻结除 vision_proj 外的所有参数
-    for name, param in model.named_parameters():
-        if 'vision_proj' not in name:
-            param.requires_grad = False
-    # 可训练
-    if hasattr(model, "layers"):
-        last_two_layers = model.layers[-1:]
-        for layer in last_two_layers:
-            for param in layer.parameters():
-                param.requires_grad = True
+    state_dict = torch.load(ckp, map_location=args.device)
+    model.load_state_dict(state_dict, strict=False)
 
     Logger(f'T2I可训练参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
 
@@ -139,7 +128,7 @@ def init_distributed_mode():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MiniMind-V Pretrain")
     parser.add_argument("--out_dir", type=str, default="out")
-    parser.add_argument("--epochs", type=int, default=4)
+    parser.add_argument("--epochs", type=int, default=6)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--learning_rate", type=float, default=4e-4)
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu")
