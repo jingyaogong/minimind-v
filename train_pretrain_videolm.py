@@ -86,7 +86,7 @@ def train_epoch(epoch, wandb):
         if (step + 1) % args.save_interval == 0 and (not ddp or dist.get_rank() == 0):
             model.eval()
             moe_path = '_moe' if model_config.use_moe else ''
-            ckp = f'{args.save_dir}/pretrain_vlm_{model_config.dim}{moe_path}.pth'
+            ckp = f'{args.save_dir}/pretrain_videolm_{model_config.dim}{moe_path}.pth'
             if isinstance(model, torch.nn.parallel.DistributedDataParallel):
                 state_dict = model.module.state_dict()
             else:
