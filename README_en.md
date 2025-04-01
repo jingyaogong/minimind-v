@@ -117,6 +117,14 @@ git clone https://huggingface.co/openai/clip-vit-base-patch16
 git clone https://www.modelscope.cn/models/openai-mirror/clip-vit-base-patch16
 ```
 
+```bash
+# Download the pure language model to the ./out directory (as the base language model for training VLM):
+https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/lm_512.pth
+# or
+https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/lm_768.pth
+```
+
+
 ## Ⅰ Test an existing model's performance
 
 ### 1. Environment Preparation

@@ -110,6 +110,13 @@ git clone https://huggingface.co/openai/clip-vit-base-patch16
 git clone https://www.modelscope.cn/models/openai-mirror/clip-vit-base-patch16
 ```
 
+```bash
+# 下载纯语言模型权重到 ./out 目录下（作为训练VLM的基座语言模型）
+https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/lm_512.pth
+# or
+https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/lm_768.pth
+```
+
 ## Ⅰ 测试已有模型效果
 
 ### 1.环境准备
