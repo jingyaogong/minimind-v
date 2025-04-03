@@ -137,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_wandb", default=False, action="store_true")
     parser.add_argument("--wandb_project", type=str, default="MiniMind-V")
     parser.add_argument("--num_workers", type=int, default=8)
-    parser.add_argument("--data_path", type=str, default="./dataset/sft_vlm_data.jsonl")
+    parser.add_argument("--data_path", type=str, default="./dataset/sft_data.jsonl")
     parser.add_argument("--images_path", type=str, default="./dataset/sft_images")
     parser.add_argument("--ddp", action="store_true")
     parser.add_argument("--accumulation_steps", type=int, default=1)
