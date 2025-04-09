@@ -338,7 +338,7 @@ Like LlaVA, Qwen-VL, and other visual language models, MiniMind-V also uses the 
 Visual Encoder.  
 Specifically, we use [clip-vit-base-patch16](https://huggingface.co/openai/clip-vit-base-patch16), a classic Visual
 Encoder based on the ViT-B/16 architecture for describing image-text information.  
-The input image size is 224x224, and because the Patch size is 16×16, it generates 16*16=196 tokens as the input to the
+The input image size is 224x224, and because the Patch size is 16×16, it generates 14*14=196 tokens as the input to the
 encoder layer, which produces a 1×768 dimensional embedding vector for calculating error with the text.  
 We don’t need the final embedding representation, so we only take the output from the encoder layer, which is the output
 feature from the core ViT backbone.  
