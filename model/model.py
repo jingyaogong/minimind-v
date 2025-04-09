@@ -4,7 +4,7 @@ import inspect
 import time
 
 from .LMConfig import LMConfig
-from typing import Any, Optional, Tuple, List
+from typing import Any, Optional, Tuple, List, Union
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -14,13 +14,16 @@ from transformers.modeling_outputs import CausalLMOutputWithPast
 
 
 class RMSNorm(torch.nn.Module):
-    def __init__(self, dim: int, eps: float):
+    def __init__(self, dim: int, eps: float = 1e-6):
         super().__init__()
         self.eps = eps
         self.weight = nn.Parameter(torch.ones(dim))
 
+    def _norm(self, x):
+        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+
     def forward(self, x):
-        return self.weight * (x.float() * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)).type_as(x)
+        return self.weight * self._norm(x.float()).type_as(x)
 
 
 def precompute_pos_cis(dim: int, end: int = int(32 * 1024), theta: float = 1e6):
@@ -239,9 +242,10 @@ class MOEFeedForward(nn.Module):
         idxs = flat_expert_indices.argsort()
         tokens_per_expert = flat_expert_indices.bincount().cpu().numpy().cumsum(0)
         token_idxs = idxs // self.config.num_experts_per_tok
-        # 例如当tokens_per_expert=[6, 15, 20, 26, 33, 38, 46, 52]
-        # 当token_idxs=[3, 7, 19, 21, 24, 25,  4,  5,  6, 10, 11, 12...]
-        # 意味着当token_idxs[:6] -> [3,  7, 19, 21, 24, 25,  4]位置的token都由专家0处理，token_idxs[6:15]位置的token都由专家1处理......
+        # 当tokens_per_expert = [6, 15, 20, 26]，tokens_per_expert.shape[0]即为专家数量（此时为4）
+        # 且token_idxs = [3, 7, 19, 21, 24, 25,  4,  5,  6, 10, 11, 12...] 时
+        # 意味token_idxs[:6] -> [3, 7, 19, 21, 24, 25]这6个位置属于专家0处理的token（每个token有可能被多个专家处理，这取决于num_experts_per_tok）
+        # 接下来9个位置token_idxs[6:15] -> [4,  5,  6, 10, 11, 12...]属于专家1处理的token...依此类推
         for i, end_idx in enumerate(tokens_per_expert):
             start_idx = 0 if i == 0 else tokens_per_expert[i - 1]
             if start_idx == end_idx:
@@ -251,7 +255,6 @@ class MOEFeedForward(nn.Module):
             expert_tokens = x[exp_token_idx]
             expert_out = expert(expert_tokens).to(expert_cache.dtype)
             expert_out.mul_(flat_expert_weights[idxs[start_idx:end_idx]])
-            # 使用 scatter_add_ 进行 sum 操作
             expert_cache.scatter_add_(0, exp_token_idx.view(-1, 1).repeat(1, x.shape[-1]), expert_out)
 
         return expert_cache
@@ -304,6 +307,7 @@ class MiniMindLM(PreTrainedModel):
                 input_ids: Optional[torch.Tensor] = None,
                 past_key_values: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
                 use_cache: bool = False,
+                logits_to_keep: Union[int, torch.Tensor] = 0,
                 **args):
         past_key_values = past_key_values or [None] * len(self.layers)
         start_pos = args.get('start_pos', 0)
@@ -317,8 +321,11 @@ class MiniMindLM(PreTrainedModel):
                 use_cache=use_cache
             )
             past_kvs.append(past_kv)
-        logits = self.output(self.norm(h))
+
+        slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
+        logits = self.output(self.norm(h)[:, slice_indices, :])
         aux_loss = sum(l.feed_forward.aux_loss for l in self.layers if isinstance(l.feed_forward, MOEFeedForward))
+        self.OUT.__setitem__('last_hidden_state', h)
         self.OUT.__setitem__('logits', logits)
         self.OUT.__setitem__('aux_loss', aux_loss)
         self.OUT.__setitem__('past_key_values', past_kvs)
@@ -326,7 +333,7 @@ class MiniMindLM(PreTrainedModel):
 
     @torch.inference_mode()
     def generate(self, input_ids, eos_token_id=2, max_new_tokens=1024, temperature=0.75, top_p=0.90,
-                 stream=False, rp=1., use_cache=True, pad_token_id=0, **args):
+                 stream=False, rp=1., use_cache=True, pad_token_id=0, num_return_sequences=1, **args):
         # 流式生成
         if stream:
             return self._stream(input_ids, eos_token_id, max_new_tokens, temperature, top_p, rp, use_cache, **args)
@@ -335,11 +342,13 @@ class MiniMindLM(PreTrainedModel):
         generated = []
         for i in range(input_ids.size(0)):
             non_pad = input_ids[i][input_ids[i] != pad_token_id].unsqueeze(0)
-            out = self._stream(non_pad, eos_token_id, max_new_tokens, temperature, top_p, rp, use_cache, **args)
-            tokens_list = [tokens[:, -1:] for tokens in out]
-            gen = torch.cat(tokens_list, dim=-1) if tokens_list else non_pad
-            full_sequence = torch.cat([non_pad, gen], dim=-1)
-            generated.append(full_sequence)
+            for _ in range(num_return_sequences):
+                out = self._stream(non_pad, eos_token_id, max_new_tokens, temperature, top_p, rp, use_cache, **args)
+                tokens_list = [tokens[:, -1:] for tokens in out]
+                gen = torch.cat(tokens_list, dim=-1) if tokens_list else non_pad
+                full_sequence = torch.cat([non_pad, gen], dim=-1)
+                generated.append(full_sequence)
+
         max_length = max(seq.size(1) for seq in generated)
         generated = [
             torch.cat(
@@ -347,7 +356,9 @@ class MiniMindLM(PreTrainedModel):
                 dim=-1)
             for seq in generated
         ]
-        return torch.cat(generated, dim=0)
+        output = torch.cat(generated, dim=0)
+        res = output.view(input_ids.size(0) * num_return_sequences, -1)
+        return res
 
     def _stream(self, input_ids, eos_token_id, max_new_tokens, temperature, top_p, rp, use_cache, **args):
         start, first_seq, past_kvs = input_ids.shape[1], True, None
