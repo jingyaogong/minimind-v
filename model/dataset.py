@@ -20,8 +20,8 @@ class VLMDataset(Dataset):
         self.max_length = max_length
         self.preprocess = preprocess
         self.image_token = image_special_token
-        self.bos_id = tokenizer('<s>assistant\n', add_special_tokens=False).input_ids
-        self.eos_id = tokenizer('</s>\n', add_special_tokens=False).input_ids
+        self.bos_id = tokenizer('<s>assistant', add_special_tokens=False).input_ids
+        self.eos_id = tokenizer('</s>', add_special_tokens=False).input_ids
 
     def __len__(self):
         return len(self.samples)
