@@ -16,8 +16,8 @@ def count_parameters(model):
 
 
 def init_model(lm_config, device):
-    tokenizer = AutoTokenizer.from_pretrained('./model')
     if args.load == 0:
+        tokenizer = AutoTokenizer.from_pretrained('./model')
         moe_path = '_moe' if args.use_moe else ''
         modes = {0: 'pretrain_vlm', 1: 'sft_vlm', 2: 'sft_vlm_multi'}
         ckp = f'./{args.out_dir}/{modes[args.model_mode]}_{args.hidden_size}{moe_path}.pth'
