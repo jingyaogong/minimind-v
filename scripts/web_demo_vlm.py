@@ -1,11 +1,17 @@
+import os
+import sys
+
+__package__ = "scripts"
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import argparse
 import torch
 import warnings
 import gradio as gr
+from queue import Queue
+from threading import Thread
 from PIL import Image
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from model.model_vlm import MiniMindVLM
-from model.VLMConfig import VLMConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
+from model.model_vlm import MiniMindVLM, VLMConfig
 from transformers import logging as hf_logging
 
 hf_logging.set_verbosity_error()
@@ -13,29 +19,42 @@ warnings.filterwarnings('ignore')
 
 
 def init_model(lm_config):
-    tokenizer = AutoTokenizer.from_pretrained('./model/minimind_tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained('../model')
 
     if args.load == 0:
         moe_path = '_moe' if lm_config.use_moe else ''
-        ckp = f'./out/sft_vlm_{lm_config.dim}{moe_path}.pth'
-        model = MiniMindVLM(lm_config)
+        ckp = f'../out/sft_vlm_{lm_config.hidden_size}{moe_path}.pth'
+        model = MiniMindVLM(lm_config, vision_model_path="../model/vision_model/clip-vit-base-patch16")
         state_dict = torch.load(ckp, map_location=args.device)
         model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=False)
     else:
-        transformers_model_path = './MiniMind2-V'
+        transformers_model_path = '../MiniMind2-V'
         tokenizer = AutoTokenizer.from_pretrained(transformers_model_path)
         model = AutoModelForCausalLM.from_pretrained(transformers_model_path, trust_remote_code=True)
+        model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("../model/vision_model/clip-vit-base-patch16")
 
     print(f'VLM参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
 
-    vision_model, preprocess = MiniMindVLM.get_vision_model()
+    vision_model, preprocess = model.vision_encoder, model.processor
     return model.eval().to(args.device), tokenizer, vision_model.to(args.device), preprocess
+
+
+class CustomStreamer(TextStreamer):
+    def __init__(self, tokenizer, queue):
+        super().__init__(tokenizer, skip_prompt=True, skip_special_tokens=True)
+        self.queue = queue
+        self.tokenizer = tokenizer
+
+    def on_finalized_text(self, text: str, stream_end: bool = False):
+        self.queue.put(text)
+        if stream_end:
+            self.queue.put(None)
 
 
 def chat(prompt, current_image_path):
     global temperature, top_p
     image = Image.open(current_image_path).convert('RGB')
-    pixel_tensors = MiniMindVLM.image2tensor(image, preprocess).to(model.device).unsqueeze(0)
+    pixel_values = MiniMindVLM.image2tensor(image, preprocess).to(model.device).unsqueeze(0)
 
     prompt = f'{lm_config.image_special_token}\n{prompt}'
     messages = [{"role": "user", "content": prompt}]
@@ -45,32 +64,37 @@ def chat(prompt, current_image_path):
         tokenize=False,
         add_generation_prompt=True
     )[-args.max_seq_len + 1:]
+
     with torch.no_grad():
-        x = torch.tensor(tokenizer(new_prompt)['input_ids'], device=model.device).unsqueeze(0)
-        outputs = model.generate(
-            x,
-            eos_token_id=tokenizer.eos_token_id,
-            max_new_tokens=args.max_seq_len,
-            temperature=temperature,
-            top_p=top_p,
-            stream=True,
-            pad_token_id=tokenizer.pad_token_id,
-            pixel_tensors=pixel_tensors
-        )
-        try:
-            if not args.stream:
-                print(tokenizer.decode(outputs.squeeze()[x.shape[1]:].tolist(), skip_special_tokens=True), end='')
-            else:
-                history_idx = 0
-                for y in outputs:
-                    answer = tokenizer.decode(y[0].tolist(), skip_special_tokens=True)
-                    if (answer and answer[-1] == '�') or not answer:
-                        continue
-                    yield answer[history_idx:]
-                    history_idx = len(answer)
-        except StopIteration:
-            print("No answer")
-        print('\n')
+        inputs = tokenizer(
+            new_prompt,
+            return_tensors="pt",
+            truncation=True
+        ).to(args.device)
+        queue = Queue()
+        streamer = CustomStreamer(tokenizer, queue)
+
+        def _generate():
+            model.generate(
+                inputs.input_ids,
+                max_new_tokens=args.max_seq_len,
+                do_sample=True,
+                temperature=temperature,
+                top_p=top_p,
+                attention_mask=inputs.attention_mask,
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+                streamer=streamer,
+                pixel_values=pixel_values
+            )
+
+        Thread(target=_generate).start()
+
+        while True:
+            text = queue.get()
+            if text is None:
+                break
+            yield text
 
 
 def launch_gradio_server(server_name="0.0.0.0", server_port=7788):
@@ -163,14 +187,15 @@ if __name__ == '__main__':
     parser.add_argument('--temperature', default=0.65, type=float)
     parser.add_argument('--top_p', default=0.85, type=float)
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str)
-    parser.add_argument('--dim', default=768, type=int)
-    parser.add_argument('--n_layers', default=16, type=int)
+    parser.add_argument('--hidden_size', default=512, type=int)
+    parser.add_argument('--num_hidden_layers', default=8, type=int)
     parser.add_argument('--max_seq_len', default=8192, type=int)
     parser.add_argument('--use_moe', default=False, type=bool)
     parser.add_argument('--stream', default=True, type=bool)
-    parser.add_argument('--load', default=0, type=int, help="0: 原生torch权重，1: transformers加载")
+    parser.add_argument('--load', default=1, type=int, help="0: 原生torch权重，1: transformers加载")
     args = parser.parse_args()
 
-    lm_config = VLMConfig(dim=args.dim, n_layers=args.n_layers, max_seq_len=args.max_seq_len, use_moe=args.use_moe)
+    lm_config = VLMConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers,
+                          max_seq_len=args.max_seq_len, use_moe=args.use_moe)
     model, tokenizer, vision_model, preprocess = init_model(lm_config)
     launch_gradio_server(server_name="0.0.0.0", server_port=8888)

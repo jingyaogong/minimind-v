@@ -2,7 +2,7 @@ import json
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import torch
-from .model_vlm import MiniMindVLM
+from model.model_vlm import MiniMindVLM
 import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -20,8 +20,8 @@ class VLMDataset(Dataset):
         self.max_length = max_length
         self.preprocess = preprocess
         self.image_token = image_special_token
-        self.bos_id = tokenizer('<s>assistant', add_special_tokens=False).input_ids
-        self.eos_id = tokenizer('</s>', add_special_tokens=False).input_ids
+        self.bos_id = tokenizer('<|im_start|>assistant', add_special_tokens=False).input_ids
+        self.eos_id = tokenizer('<|im_end|>', add_special_tokens=False).input_ids
 
     def __len__(self):
         return len(self.samples)

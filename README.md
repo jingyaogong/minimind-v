@@ -64,7 +64,16 @@
 ### 👉**最近更新**
 
 <details close> 
-<summary> <b>2025-02-20 (newest 🎉)</b> </summary>
+<summary> <b>2025-04-27 (newest 🎉)</b> </summary>
+
+- 兼容性更新
+- 适配[「minimind仓库新特性」](https://github.com/jingyaogong/minimind/issues/370)
+- 规范化部分代码
+
+</details>
+
+<details close> 
+<summary> <b>2025-02-20</b> </summary>
 
 - MiniMind2-V伴随MiniMind2同步更新
 - 大幅减少所有冗余代码，规范代码格式

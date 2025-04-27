@@ -1,26 +1,24 @@
-import os
-import platform
 import argparse
 import time
 import math
 import warnings
-import json
 
-import pandas as pd
+warnings.filterwarnings('ignore')
+import os
+import sys
 import torch
-import torch.nn.functional as F
 import torch.distributed as dist
-from contextlib import nullcontext
 
+__package__ = "trainer"
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from contextlib import nullcontext
 from torch import optim, nn
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, DistributedSampler
 from transformers import AutoTokenizer, AutoModel
-from model.model_vlm import MiniMindVLM
-from model.VLMConfig import VLMConfig
-from model.dataset import *
-
-warnings.filterwarnings('ignore')
+from model.model_vlm import MiniMindVLM, VLMConfig
+from dataset.lm_dataset import VLMDataset
 
 
 def Logger(content):
@@ -35,17 +33,17 @@ def get_lr(current_step, total_steps, lr):
 def train_epoch(epoch, wandb):
     loss_fct = nn.CrossEntropyLoss(reduction='none')
     start_time = time.time()
-    for step, (X, Y, loss_mask, pixel_tensors) in enumerate(train_loader):
+    for step, (X, Y, loss_mask, pixel_values) in enumerate(train_loader):
         X = X.to(args.device)
         Y = Y.to(args.device)
         loss_mask = loss_mask.to(args.device)
-        pixel_tensors = pixel_tensors.to(args.device)
+        pixel_values = pixel_values.to(args.device)
         lr = get_lr(epoch * iter_per_epoch + step, args.epochs * iter_per_epoch, args.learning_rate)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
         with ctx:
-            res = model(X, pixel_tensors=pixel_tensors)
+            res = model(X, pixel_values=pixel_values)
             loss = loss_fct(
                 res.logits.view(-1, res.logits.size(-1)),
                 Y.view(-1)
@@ -86,7 +84,7 @@ def train_epoch(epoch, wandb):
         if (step + 1) % args.save_interval == 0 and (not ddp or dist.get_rank() == 0):
             model.eval()
             moe_path = '_moe' if model_config.use_moe else ''
-            ckp = f'{args.save_dir}/sft_vlm_{model_config.dim}{moe_path}.pth'
+            ckp = f'{args.save_dir}/pretrain_vlm_{model_config.hidden_size}{moe_path}.pth'
             if isinstance(model, torch.nn.parallel.DistributedDataParallel):
                 state_dict = model.module.state_dict()
             else:
@@ -94,23 +92,28 @@ def train_epoch(epoch, wandb):
             clean_state_dict = {
                 key: value for key, value in state_dict.items() if not key.startswith('vision_encoder.')
             }
+            clean_state_dict = {k: v.half() for k, v in clean_state_dict.items()}  # 半精度保存
             torch.save(clean_state_dict, ckp)
             model.train()
 
 
 def init_model(model_config: VLMConfig):
-    tokenizer = AutoTokenizer.from_pretrained('./model/minimind_tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained('../model', use_fast=True)
     moe_path = '_moe' if model_config.use_moe else ''
-    ckp = f'./out/pretrain_vlm_{model_config.dim}{moe_path}.pth'
-
-    model = MiniMindVLM(model_config)
+    # 加载纯语言模型权重
+    ckp = f'{args.save_dir}/llm_{model_config.hidden_size}{moe_path}.pth'
+    model = MiniMindVLM(model_config, vision_model_path="../model/vision_model/clip-vit-base-patch16")
     state_dict = torch.load(ckp, map_location=args.device)
     model.load_state_dict(state_dict, strict=False)
-    model = model.to(args.device)
+
+    # 冻结除 vision_proj 外的所有参数
+    for name, param in model.named_parameters():
+        if 'vision_proj' not in name:
+            param.requires_grad = False
 
     Logger(f'VLM可训练参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
 
-    _, preprocess = MiniMindVLM.get_vision_model()
+    _, preprocess = model.vision_encoder, model.processor
     return model.to(args.device), tokenizer, preprocess
 
 
@@ -128,31 +131,32 @@ def init_distributed_mode():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MiniMind-V Pretrain")
-    parser.add_argument("--out_dir", type=str, default="out")
-    parser.add_argument("--epochs", type=int, default=6)
-    parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--learning_rate", type=float, default=1e-6)
+    parser.add_argument("--out_dir", type=str, default="../out")
+    parser.add_argument("--epochs", type=int, default=4)
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--learning_rate", type=float, default=4e-4)
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--dtype", type=str, default="bfloat16")
     parser.add_argument("--use_wandb", default=False, action="store_true")
     parser.add_argument("--wandb_project", type=str, default="MiniMind-V")
     parser.add_argument("--num_workers", type=int, default=8)
-    parser.add_argument("--data_path", type=str, default="./dataset/sft_data.jsonl")
-    parser.add_argument("--images_path", type=str, default="./dataset/sft_images")
+    parser.add_argument("--data_path", type=str, default="../dataset/pretrain_data.jsonl")
+    parser.add_argument("--images_path", type=str, default="../dataset/pretrain_images")
     parser.add_argument("--ddp", action="store_true")
     parser.add_argument("--accumulation_steps", type=int, default=1)
     parser.add_argument("--grad_clip", type=float, default=1.0)
     parser.add_argument("--warmup_iters", type=int, default=0)
-    parser.add_argument("--log_interval", type=int, default=10)
-    parser.add_argument("--save_interval", type=int, default=10)
+    parser.add_argument("--log_interval", type=int, default=100)
+    parser.add_argument("--save_interval", type=int, default=100)
     parser.add_argument('--local_rank', type=int, default=-1)
-    parser.add_argument('--dim', default=512, type=int)
-    parser.add_argument('--n_layers', default=8, type=int)
-    parser.add_argument('--max_seq_len', default=1536, type=int)
+    parser.add_argument('--hidden_size', default=512, type=int)
+    parser.add_argument('--num_hidden_layers', default=8, type=int)
+    parser.add_argument('--max_seq_len', default=640, type=int)
     parser.add_argument('--use_moe', default=False, type=bool)
     args = parser.parse_args()
 
-    model_config = VLMConfig(dim=args.dim, n_layers=args.n_layers, max_seq_len=args.max_seq_len)
+    model_config = VLMConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers,
+                             max_seq_len=args.max_seq_len)
     max_seq_len = model_config.max_seq_len
     args.save_dir = os.path.join(args.out_dir)
     os.makedirs(args.save_dir, exist_ok=True)
@@ -161,7 +165,7 @@ if __name__ == "__main__":
     torch.manual_seed(1337)
     device_type = "cuda" if "cuda" in args.device else "cpu"
 
-    args.wandb_run_name = f"MiniMind-V SFT-Epoch-{args.epochs}-BatchSize-{args.batch_size}-LearningRate-{args.learning_rate}"
+    args.wandb_run_name = f"MiniMind-V Pretrain-Epoch-{args.epochs}-BatchSize-{args.batch_size}-LearningRate-{args.learning_rate}"
 
     ctx = nullcontext() if device_type == "cpu" else torch.cuda.amp.autocast()
     ddp = int(os.environ.get("RANK", -1)) != -1  # is this a ddp run?
@@ -194,7 +198,7 @@ if __name__ == "__main__":
     )
 
     scaler = torch.cuda.amp.GradScaler(enabled=(args.dtype in ['float16', 'bfloat16']))
-    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
+    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.learning_rate)
 
     if ddp:
         model._ddp_params_and_buffers_to_ignore = {"pos_cis"}

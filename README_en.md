@@ -7,7 +7,6 @@
 
 <div align="center">
 
-![visitors](https://visitor-badge.laobi.icu/badge?page_id=jingyaogong/minimind-v)
 [![GitHub Repo stars](https://img.shields.io/github/stars/jingyaogong/minimind-v?style=social)](https://github.com/jingyaogong/minimind-v/stargazers)
 [![GitHub Code License](https://img.shields.io/github/license/jingyaogong/minimind-v?v=1)](LICENSE)
 [![GitHub last commit](https://img.shields.io/github/last-commit/jingyaogong/minimind-v)](https://github.com/jingyaogong/minimind-v/commits/master)
@@ -71,7 +70,17 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 ### 👉**Recent Updates**
 
 <details close> 
-<summary> <b>2025-02-20 (newest 🎉)</b> </summary>
+<summary> <b>2025-04-27 (newest 🎉)</b> </summary>
+
+- Compatibility updates
+- Adapted to the new feature in the "minimind" repository
+- Standardized parts of the code
+
+</details>
+
+
+<details close> 
+<summary> <b>2025-02-20</b> </summary>
 
 - MiniMind2-V updated alongside MiniMind2
 - Significant reduction of all redundant code, standardized code format
