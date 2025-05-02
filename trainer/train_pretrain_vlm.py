@@ -55,6 +55,7 @@ def train_epoch(epoch, wandb):
 
         scaler.scale(loss).backward()
 
+
         if (step + 1) % args.accumulation_steps == 0:
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
@@ -98,18 +99,20 @@ def train_epoch(epoch, wandb):
 
 
 def init_model(model_config: VLMConfig):
-    tokenizer = AutoTokenizer.from_pretrained('../model', use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained('../model/minimind_tokenizer', use_fast=True)
     moe_path = '_moe' if model_config.use_moe else ''
     # 加载纯语言模型权重
     ckp = f'{args.save_dir}/llm_{model_config.hidden_size}{moe_path}.pth'
     model = MiniMindVLM(model_config, vision_model_path="../model/vision_model/clip-vit-base-patch16")
     state_dict = torch.load(ckp, map_location=args.device)
-    model.load_state_dict(state_dict, strict=False)
+    model.load_state_dict(state_dict, strict=False) # 允许有些参数缺失或多余,即只加载llm部分的参数
 
-    # 冻结除 vision_proj 外的所有参数
-    for name, param in model.named_parameters():
-        if 'vision_proj' not in name:
-            param.requires_grad = False
+    # 冻结除 vision_proj lm_head外的所有参数
+    # for name, param in model.named_parameters():
+    #     if 'vision_proj' in name or 'lm_head' in name:
+    #         param.requires_grad = True
+    #     else:
+    #         param.requires_grad = False
 
     Logger(f'VLM可训练参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
 
