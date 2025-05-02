@@ -192,7 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_seq_len', default=8192, type=int)
     parser.add_argument('--use_moe', default=False, type=bool)
     parser.add_argument('--stream', default=True, type=bool)
-    parser.add_argument('--load', default=1, type=int, help="0: 原生torch权重，1: transformers加载")
+    parser.add_argument('--load', default=0, type=int, help="0: 原生torch权重，1: transformers加载")
     args = parser.parse_args()
 
     lm_config = VLMConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers,

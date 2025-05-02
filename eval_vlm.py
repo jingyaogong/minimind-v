@@ -16,18 +16,21 @@ def count_parameters(model):
 
 
 def init_model(lm_config, device):
-    tokenizer = AutoTokenizer.from_pretrained('./model')
+
+
     if args.load == 0:
+        tokenizer = AutoTokenizer.from_pretrained('./model/minimind_tokenizer')
         moe_path = '_moe' if args.use_moe else ''
         modes = {0: 'pretrain_vlm', 1: 'sft_vlm', 2: 'sft_vlm_multi'}
         ckp = f'./{args.out_dir}/{modes[args.model_mode]}_{args.hidden_size}{moe_path}.pth'
         model = MiniMindVLM(lm_config, vision_model_path="./model/vision_model/clip-vit-base-patch16")
         state_dict = torch.load(ckp, map_location=device)
         model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=False)
+
     else:
-        transformers_model_path = 'MiniMind2-Small-V'
+        transformers_model_path = './MiniMind2-V'
         tokenizer = AutoTokenizer.from_pretrained(transformers_model_path)
-        model = AutoModelForCausalLM.from_pretrained(transformers_model_path, trust_remote_code=True)
+        model = MiniMindVLM.from_pretrained(transformers_model_path, trust_remote_code=True)
         model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("./model/vision_model/clip-vit-base-patch16")
 
     print(f'VLM参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
@@ -62,7 +65,7 @@ if __name__ == "__main__":
     # 默认单图推理，设置为2为多图推理
     parser.add_argument('--use_multi', default=1, type=int)
     parser.add_argument('--stream', default=True, type=bool)
-    parser.add_argument('--load', default=1, type=int, help="0: 原生torch权重，1: transformers加载")
+    parser.add_argument('--load', default=0, type=int, help="0: 原生torch权重，1: transformers加载")
     parser.add_argument('--model_mode', default=1, type=int,
                         help="0: Pretrain模型，1: SFT模型，2: SFT-多图模型 (beta拓展)")
     args = parser.parse_args()

@@ -2,10 +2,13 @@ import os
 
 import torch
 import warnings
+
+from transformers.generation.utils import GenerateOutput
+
 from .model_minimind import *
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Callable
 from torch import nn
-from transformers import CLIPProcessor, CLIPModel
+from transformers import CLIPProcessor, CLIPModel, GenerationConfig, LogitsProcessorList, StoppingCriteriaList
 from typing import List
 
 warnings.filterwarnings('ignore')
@@ -23,6 +26,7 @@ class VLMConfig(MiniMindConfig):
         self.image_special_token = image_special_token
         self.image_ids = image_ids
         super().__init__(**kwargs)
+
 
 class VisionProj(nn.Module):
     def __init__(self, ve_hidden_size=768, hidden_size=512):
@@ -166,3 +170,137 @@ class MiniMindVLM(MiniMindForCausalLM):
         self.OUT.__setitem__('aux_loss', aux_loss)
         self.OUT.__setitem__('past_key_values', presents)
         return self.OUT
+
+
+    ## 以下函数使用gpt生成
+    def sample_logits(self, logits: torch.Tensor, temperature: float = 1.0, top_p: float = 1.0) -> torch.Tensor:
+        if temperature != 1.0:
+            logits = logits / (temperature + 1e-6)
+
+        probs = F.softmax(logits, dim=-1)
+
+        if top_p < 1.0:
+            sorted_probs, sorted_indices = torch.sort(probs, descending=True)
+            cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+
+            sorted_indices_to_remove = cumulative_probs > top_p
+            sorted_indices_to_remove[:, 1:] = sorted_indices_to_remove[:, :-1].clone()
+            sorted_indices_to_remove[:, 0] = False
+
+            indices_to_remove = torch.zeros_like(probs, dtype=torch.bool)
+            indices_to_remove.scatter_(1, sorted_indices, sorted_indices_to_remove)
+
+            probs = probs.masked_fill(indices_to_remove, 0.0)
+            probs = probs / probs.sum(dim=-1, keepdim=True)
+
+        return torch.multinomial(probs, num_samples=1)
+
+    @torch.inference_mode()
+    def generate(
+            self,
+            input_ids: torch.LongTensor,
+            pixel_values: Optional[torch.FloatTensor] = None,
+            max_new_tokens: Optional[int] = 128,
+            do_sample: bool = False,
+            temperature: float = 1.0,
+            top_p: float = 1.0,
+            num_return_sequences: int = 1,
+            attention_mask: Optional[torch.Tensor] = None,
+            pad_token_id: int = 0,
+            eos_token_id: int = 2,
+            streamer=None,
+            use_cache: bool = True,
+            **kwargs
+    ) -> Union[GenerateOutput, torch.LongTensor]:
+
+
+
+        generated = []
+
+        for batch_idx in range(input_ids.size(0)):
+            input_ids_i = input_ids[batch_idx][input_ids[batch_idx] != pad_token_id].unsqueeze(0)
+            pixel_values_i = pixel_values[batch_idx:batch_idx + 1] if pixel_values is not None else None
+            for _ in range(num_return_sequences):
+                output = self._stream(
+                    input_ids=input_ids_i,
+                    pixel_values=pixel_values_i,
+                    eos_token_id=eos_token_id,
+                    max_new_tokens=max_new_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                    use_cache=use_cache,
+                    do_sample=do_sample,
+                    streamer=streamer,
+                )
+                tokens = []
+                for t in output:
+                    if streamer is None:
+                        tokens.append(t[:, -1:])
+                if tokens:
+                    result = torch.cat(tokens, dim=1)
+                    full_sequence = torch.cat([input_ids_i, result], dim=1)
+                else:
+                    full_sequence = input_ids_i
+                generated.append(full_sequence)
+
+        max_len = max(seq.shape[1] for seq in generated)
+        generated = [
+            torch.cat([
+                seq,
+                torch.full((1, max_len - seq.shape[1]), pad_token_id, dtype=seq.dtype, device=seq.device)
+            ], dim=1)
+            for seq in generated
+        ]
+        return torch.cat(generated, dim=0)
+
+    def _stream(
+            self,
+            input_ids: torch.LongTensor,
+            pixel_values: Optional[torch.FloatTensor] = None,
+            eos_token_id: Optional[int] = 2,
+            max_new_tokens: int = 128,
+            temperature: float = 1.0,
+            top_p: float = 1.0,
+            do_sample: bool = False,
+            streamer=None,
+            use_cache: bool = True,
+            **kwargs
+    ):
+        past_key_values = None
+        first_pass = True
+        start_pos = input_ids.shape[1]
+        for _ in range(max_new_tokens):
+            if first_pass:
+                out = self(
+                    input_ids=input_ids,
+                    pixel_values=pixel_values,
+                    past_key_values=None,
+                    use_cache=use_cache,
+                    **kwargs
+                )
+                first_pass = False
+            else:
+                out = self(
+                    input_ids=input_ids[:, -1:],  # only last token
+                    past_key_values=past_key_values,
+                    use_cache=use_cache,
+                    **kwargs
+                )
+
+            logits = out.logits[:, -1, :]
+            past_key_values = out.past_key_values
+
+            if do_sample:
+                next_token = self.sample_logits(logits)
+            else:
+                next_token = torch.argmax(logits, dim=-1, keepdim=True)
+
+            input_ids = torch.cat([input_ids, next_token], dim=1)
+
+            if streamer is not None:
+                streamer.put(next_token)
+
+            yield input_ids[:, start_pos:]
+
+            if next_token.item() == eos_token_id:
+                break
