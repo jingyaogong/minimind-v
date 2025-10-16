@@ -119,6 +119,7 @@ class MiniMindVLM(MiniMindForCausalLM):
                 pixel_values: Optional[torch.FloatTensor] = None,
                 **args):
         batch_size, seq_length = input_ids.shape
+        if hasattr(past_key_values, 'layers'): past_key_values = None
         past_key_values = past_key_values or [None] * len(self.model.layers)
         start_pos = past_key_values[0][0].shape[1] if past_key_values[0] is not None else 0
 
