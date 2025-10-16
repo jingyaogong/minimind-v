@@ -17,6 +17,13 @@
 </div>
 
 <div align="center">
+
+![GitHub Trend](https://trendshift.io/api/badge/repositories/13265)
+
+</div>
+
+
+<div align="center">
   <h3>"大道至简"</h3>
 </div>
 

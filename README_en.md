@@ -15,6 +15,12 @@
 
 </div>
 
+<div align="center">
+
+![GitHub Trend](https://trendshift.io/api/badge/repositories/13265)
+
+</div>
+
 
 <div align="center">
   <h3>"The Greatest Path is the Simplest"</h3>
