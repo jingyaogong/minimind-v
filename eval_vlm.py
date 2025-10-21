@@ -25,7 +25,7 @@ def init_model(lm_config, device):
         state_dict = torch.load(ckp, map_location=device)
         model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=False)
     else:
-        transformers_model_path = 'MiniMind2-Small-V'
+        transformers_model_path = 'MiniMind2-V'
         tokenizer = AutoTokenizer.from_pretrained(transformers_model_path)
         model = AutoModelForCausalLM.from_pretrained(transformers_model_path, trust_remote_code=True)
         model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("./model/vision_model/clip-vit-base-patch16")
