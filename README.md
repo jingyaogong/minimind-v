@@ -128,9 +128,9 @@ git clone https://www.modelscope.cn/models/openai-mirror/clip-vit-base-patch16
 
 ```bash
 # 下载纯语言模型权重到 ./out 目录下（作为训练VLM的基座语言模型）
-https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/lm_512.pth
+https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_512.pth
 # or
-https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/lm_768.pth
+https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_768.pth
 ```
 
 ## Ⅰ 测试已有模型效果
@@ -347,7 +347,7 @@ GPT模型根据现有token预测输出下一个下下一个下下下一个token 
 
 下面，我们简单讨论MiniMind-V的外部输入输出的变化。
 
-VLM的输入依然是一段文本，其中包含特殊的<image>占位符。
+VLM的输入依然是一段文本，其中包含特殊的`<image>`占位符。
 在计算文本嵌入后，可以将图像编码器生成的向量投影到该占位符对应的嵌入部分，替换掉原先的占位符embedding。
 例如：
 
