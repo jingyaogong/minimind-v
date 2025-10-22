@@ -76,14 +76,21 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 ### 👉**Recent Updates**
 
 <details close> 
-<summary> <b>2025-04-27 (newest 🎉)</b> </summary>
+<summary> <b>2025-10-24 (newest 🎉)</b> </summary>
+
+- Bug fix: model weights mismatch
+- Adapted to ["minimind-1024 update"](https://github.com/jingyaogong/minimind)
+
+</details>
+
+<details close> 
+<summary> <b>2025-04-27</b> </summary>
 
 - Compatibility updates
 - Adapted to the new feature in the "minimind" repository
 - Standardized parts of the code
 
 </details>
-
 
 <details close> 
 <summary> <b>2025-02-20</b> </summary>
@@ -133,10 +140,11 @@ git clone https://www.modelscope.cn/models/openai-mirror/clip-vit-base-patch16
 ```
 
 ```bash
-# Download the pure language model to the ./out directory (as the base language model for training VLM):
-https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_512.pth
-# or
-https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_768.pth
+# Download the minimind language model to the ./out directory (as the base language model for training VLM):
+# HuggingFace
+https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_512.pth # or llm_768.pth
+# Domestic source
+https://modelscope.cn/models/gongjy/MiniMind2-V-PyTorch/resolve/master/llm_512.pth # or llm_768.pth
 ```
 
 

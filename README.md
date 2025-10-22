@@ -71,7 +71,15 @@
 ### 👉**最近更新**
 
 <details close> 
-<summary> <b>2025-04-27 (newest 🎉)</b> </summary>
+<summary> <b>2025-10-24 (newest 🎉)</b> </summary>
+
+- bug修复：模型权重不对应
+- 适配[「minimind-1024更新」](https://github.com/jingyaogong/minimind)
+
+</details>
+
+<details close> 
+<summary> <b>2025-04-27</b> </summary>
 
 - 兼容性更新
 - 适配[「minimind仓库新特性」](https://github.com/jingyaogong/minimind/issues/370)
@@ -127,10 +135,11 @@ git clone https://www.modelscope.cn/models/openai-mirror/clip-vit-base-patch16
 ```
 
 ```bash
-# 下载纯语言模型权重到 ./out 目录下（作为训练VLM的基座语言模型）
-https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_512.pth
-# or
-https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_768.pth
+# 下载minimind语言模型权重到 ./out 目录下（作为训练VLM的基座语言模型）
+# HuggingFace
+https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_512.pth # or llm_768.pth
+# 国内源
+https://modelscope.cn/models/gongjy/MiniMind2-V-PyTorch/resolve/master/llm_512.pth # or llm_768.pth
 ```
 
 ## Ⅰ 测试已有模型效果
