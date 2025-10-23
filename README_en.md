@@ -153,7 +153,7 @@ https://modelscope.cn/models/gongjy/MiniMind2-V-PyTorch/resolve/master/llm_512.p
 ### 1. Environment Preparation
 
 ```bash
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
 ```
 
 ### 2. Download the model
@@ -180,7 +180,7 @@ python web_demo_vlm.py
 ### 1. Environment Preparation
 
 ```bash
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
 ```
 
 <details style="color:rgb(128,128,128)">
@@ -200,18 +200,29 @@ for help.
 
 ### 2. Download Data
 
-Download the required dataset files from
-the [dataset download link](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset), create a `./dataset`
-directory, and place the files under `./dataset`.
-
-`*.jsonl` is the Q&A dataset, and `*images` are the accompanying image data. After downloading, decompress the image
-data.
+Download the required content from the [dataset link](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset) 
+and place it under `./dataset`.
 
 <details style="color:rgb(128,128,128)">
 <summary>Note: Dataset Details</summary>
 
-Please reserve about 5GB of space for the dataset. If there is insufficient space for pretrain data, you can try
-skipping the pretrain training step and proceed directly to SFT training.
+Pretrain data:
+```bash
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_data.jsonl
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_images.zip
+unzip pretrain_images.zip && rm pretrain_images.zip
+```
+
+SFT data:
+```bash
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_data.jsonl
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_images.zip
+unzip sft_images.zip && rm sft_images.zip
+```
+
+`*.jsonl` contains Q&A text, and `*images` are the accompanying image data. After downloading, decompress the image data.
+
+Please reserve about 5GB of space for the dataset. If there is insufficient space for pretrain data, you can try skipping the pretrain training step and proceed directly to SFT training.
 
 </details>
 
@@ -287,6 +298,8 @@ python train_xxx.py --use_wandb
 By adding the `--use_wandb` parameter, you can log the training process, and after training is complete, you can view
 the process on the wandb website. You can specify the project name and run name by modifying the `wandb_project`
 and `wandb_run_name` parameters.
+
+[Note]: After June 2025, the domestic network environment cannot directly connect to WandB. The MiniMind project by default switches to using [SwanLab](https://swanlab.cn/) as the training visualization tool (fully compatible with WandB API), that is, just change `import wandb` to `import swanlab as wandb`, no other changes are needed.
 
 </details>
 

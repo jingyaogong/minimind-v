@@ -176,8 +176,7 @@ if __name__ == "__main__":
         args.device = torch.device(DEVICE)
 
     if args.use_wandb and (not ddp or ddp_local_rank == 0):
-        import wandb
-
+        import swanlab as wandb
         wandb.init(project=args.wandb_project, name=args.wandb_run_name)
     else:
         wandb = None

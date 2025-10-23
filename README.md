@@ -192,16 +192,29 @@ print(torch.cuda.is_available())
 
 ### 2.数据下载
 
-从下文提供的[数据集下载链接](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)
-下载需要的数据文件（创建`./dataset`目录）并放到`./dataset`下。
-
-`*.jsonl`为问答数据集，`*images`为配套的图片数据，下载完成后需要解压图像数据。
+从下文提供的[数据集链接](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)
+下载所需内容并放到`./dataset`下。
 
 <details style="color:rgb(128,128,128)">
 <summary>注：数据集须知</summary>
 
-请预留~5GB空间存放数据集，若无多余空间存放pretrain数据，
-可尝试跳过pretrain训练步骤直接进行sft训练。
+Pretrain数据：
+```bash
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_data.jsonl
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_images.zip
+unzip pretrain_images.zip && rm pretrain_images.zip
+```
+
+SFT数据：
+```bash
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_data.jsonl
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_images.zip
+unzip sft_images.zip && rm sft_images.zip
+```
+
+`*.jsonl`为问答文本，`*images`为配套的图片数据，下载完成后需要解压图像数据。
+
+请预留~5GB空间存放数据集，若无多余空间存放pretrain数据，可尝试跳过pretrain训练步骤直接进行sft训练。
 
 </details>
 
@@ -274,6 +287,8 @@ python train_xxx.py --use_wandb
 
 通过添加`--use_wandb`参数，可以记录训练过程，训练完成后，可以在wandb网站上查看训练过程。通过修改`wandb_project`
 和`wandb_run_name`参数，可以指定项目名称和运行名称。
+
+【注】：25年6月后，国内网络环境无法直连WandB，MiniMind项目默认转为使用[SwanLab](https://swanlab.cn/)作为训练可视化工具（完全兼容WandB API），即`import wandb`改为`import swanlab as wandb`即可，其他均无需改动。
 
 </details>
 
