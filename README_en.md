@@ -80,6 +80,8 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 
 - Bug fix: model weights mismatch
 - Adapted to ["minimind-1024 update"](https://github.com/jingyaogong/minimind)
+- Code refactoring: training and evaluation scripts standardized
+- Added complete checkpoint resumption support
 
 </details>
 
@@ -165,8 +167,11 @@ git clone https://huggingface.co/jingyaogong/MiniMind2-V
 ### 3. Command-line Q&A
 
 ```bash
-# load=0: load from pytorch model, load=1: load from transformers-hf model
-python eval_vlm.py --load 1
+# load_from='model': load native PyTorch weights, load_from='other path': load transformers format
+python eval_vlm.py --load_from model --weight sft_vlm
+
+# Or use transformers format model
+python eval_vlm.py --load_from MiniMind2-V
 ```
 
 ### 4. Or start the WebUI
@@ -231,7 +236,8 @@ Please reserve about 5GB of space for the dataset. If there is insufficient spac
 **3.1 Pretraining (Learning image description)**
 
 ```bash
-python train_pretrain_vlm.py --epochs 4
+# Basic training command (start from LLM weights, train vision_proj only)
+python trainer/train_pretrain_vlm.py --epochs 4 --from_weight llm
 ```
 
 > Run pretraining to get `pretrain_vlm_*.pth` as the pretrained model's output weights (* represents the model
@@ -240,7 +246,8 @@ python train_pretrain_vlm.py --epochs 4
 **3.2 Supervised Fine-Tuning (Learning image-caption dialogue style)**
 
 ```bash
-python train_sft_vlm.py --epochs 4
+# Basic training command (start from pretrain weights, full parameter fine-tuning)
+python trainer/train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
 > Perform supervised fine-tuning to get `sft_vlm_*.pth` as the output weights for the fine-tuned model.
@@ -248,8 +255,23 @@ python train_sft_vlm.py --epochs 4
 <details style="color:rgb(128,128,128)">
 <summary>Note: Training Details</summary>
 
-By default, the training process saves model parameters every 100 steps to the `./out/***.pth` file (it will overwrite
-previous weight files).
+**Training Features:**
+- Support checkpoint resumption: add `--from_resume 1` parameter to continue from last interruption
+- Support GPU count changes: automatically convert steps when GPU count changes during resumption
+- Atomic saving: use temporary file + replacement mechanism to prevent weight corruption from interruption
+- Each save generates `out/**.pth` (model weights) and `checkpoints/**_resume.pth` (training state) files
+
+```bash
+# To resume training after interruption, use the same command and add --from_resume 1
+python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
+```
+
+**Parameter Description:**
+- `--from_weight`: base weight name (llm, pretrain_vlm, none, etc.)
+- `--save_weight`: save weight prefix name
+- `--from_resume`: whether to resume training (0=start from scratch, 1=continue from checkpoint)
+- `--freeze_llm`: whether to freeze LLM parameters (pretrain use only)
+- More details can be found in the code
 
 </details>
 
@@ -262,7 +284,11 @@ You can also directly download the pre-trained `*.pth` file
 from [here](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch).
 
 ```bash
-python eval_vlm.py --model_mode 1 # Default is 0: test pretrain model, set to 1: test sft model
+# Test SFT model (default)
+python eval_vlm.py --weight sft_vlm
+
+# Test Pretrain model
+python eval_vlm.py --weight pretrain_vlm
 ```
 
 ---

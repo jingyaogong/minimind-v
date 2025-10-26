@@ -75,6 +75,8 @@
 
 - bug修复：模型权重不对应
 - 适配[「minimind-1024更新」](https://github.com/jingyaogong/minimind)
+- 代码重构：训练和评估脚本规范化
+- 新增完整的断点续训支持
 
 </details>
 
@@ -159,8 +161,11 @@ git clone https://huggingface.co/jingyaogong/MiniMind2-V
 ### 3.命令行问答
 
 ```bash
-# load=0: load from pytorch model, load=1: load from transformers-hf model
-python eval_vlm.py --load 1
+# load_from='model': 加载原生PyTorch权重, load_from='其他路径': 加载transformers格式
+python eval_vlm.py --load_from model --weight sft_vlm
+
+# 或使用transformers格式模型
+python eval_vlm.py --load_from MiniMind2-V
 ```
 
 ### 4.或启动WebUI
@@ -223,7 +228,8 @@ unzip sft_images.zip && rm sft_images.zip
 **3.1 预训练（学图像描述）**
 
 ```bash
-python train_pretrain_vlm.py --epochs 4
+# 基础训练命令（从LLM权重开始，仅训练vision_proj）
+python trainer/train_pretrain_vlm.py --epochs 4 --from_weight llm
 ```
 
 > 执行预训练，得到 `pretrain_vlm_*.pth` 作为预训练的输出权重（其中*为模型的dimension，默认为512）
@@ -232,7 +238,8 @@ python train_pretrain_vlm.py --epochs 4
 **3.2 监督微调（学看图对话方式）**
 
 ```bash
-python train_sft_vlm.py --epochs 4
+# 基础训练命令（从预训练权重开始，全参数微调）
+python trainer/train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
 > 执行监督微调，得到 `sft_vlm_*.pth` 作为指令微调的输出权重
@@ -240,7 +247,23 @@ python train_sft_vlm.py --epochs 4
 <details style="color:rgb(128,128,128)">
 <summary>注：训练须知</summary>
 
-所有训练过程默认每隔100步保存1次参数到文件`./out/***.pth`（每次会覆盖掉旧权重文件）。
+**训练特性：**
+- 支持断点续训：添加`--from_resume 1`参数可从上次中断处继续训练
+- 支持GPU数量变化：续训时GPU数量改变会自动转换step
+- 原子性保存：使用临时文件+替换机制，防止保存过程中断导致权重损坏
+- 每次保存同时生成`out/**.pth`（模型权重）和`checkpoints/**_resume.pth`（训练状态）文件
+
+```bash
+# 训练中断后，使用相同命令并添加 --from_resume 1
+python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
+```
+
+**参数说明：**
+- `--from_weight`: 基础权重名称（llm, pretrain_vlm, none等）
+- `--save_weight`: 保存权重的前缀名
+- `--from_resume`: 是否续训（0=从头开始，1=从检查点继续）
+- `--freeze_llm`: 是否冻结LLM参数（仅pretrain使用）
+- 更多可直接参考代码
 
 </details>
 
@@ -253,7 +276,11 @@ python train_sft_vlm.py --epochs 4
 也可以直接去[此处](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch)下载使用我训练的`*.pth`文件。
 
 ```bash
-python eval_vlm.py --model_mode 1 # 默认为0：测试pretrain模型效果，设置为1：测试sft模型效果
+# 测试SFT模型（默认）
+python eval_vlm.py --weight sft_vlm
+
+# 测试Pretrain模型
+python eval_vlm.py --weight pretrain_vlm
 ```
 
 ---
@@ -270,11 +297,13 @@ torchrun --nproc_per_node N train_xxx.py
 <details style="color:rgb(128,128,128)">
 <summary>注：其它须知</summary>
 
+<del>
 单机N卡启动训练 (DeepSpeed)
 
 ```bash
 deepspeed --master_port 29500 --num_gpus=N train_xxx.py
 ```
+</del>
 
 可根据需要开启wandb记录训练过程
 
