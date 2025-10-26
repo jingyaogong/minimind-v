@@ -118,11 +118,14 @@ wget https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_768.pt
 The pretraining stage teaches the model general image knowledge, such as a deer is a deer, a dog is a dog.
 
 ```bash
-cd trainer
-python train_pretrain_vlm.py --epochs 4
+# Basic training command (start from LLM weights, train vision_proj only)
+python trainer/train_pretrain_vlm.py --epochs 4 --from_weight llm
 
 # Multi-GPU training
-torchrun --nproc_per_node 2 train_pretrain_vlm.py --epochs 4
+torchrun --nproc_per_node 2 trainer/train_pretrain_vlm.py --epochs 4 --from_weight llm
+
+# Resume training from checkpoint
+python trainer/train_pretrain_vlm.py --epochs 4 --from_resume 1
 ```
 
 **Output weights**: `./out/pretrain_vlm_*.pth` (* is the model dimension, default is 512)
@@ -133,7 +136,14 @@ torchrun --nproc_per_node 2 train_pretrain_vlm.py --epochs 4
 
 **Training Strategy**:
 - Freeze Visual Encoder (CLIP model) gradients
-- Only train the last layer parameters of Projection and LLM
+- Freeze LLM main parameters (only last layer learnable via `--freeze_llm True`)
+- Only train Vision Projection layer
+
+**Key Parameters**:
+- `--from_weight llm`: Start from LLM weights
+- `--freeze_llm True`: Freeze LLM parameters (pretrain only)
+- `--from_resume 1`: Resume from checkpoint
+- `--save_weight pretrain_vlm`: Save weight prefix name
 
 **Loss Curve**:
 
@@ -144,10 +154,14 @@ torchrun --nproc_per_node 2 train_pretrain_vlm.py --epochs 4
 The SFT stage teaches the model real image-text dialogue format, better aligning with human communication habits.
 
 ```bash
-python train_sft_vlm.py --epochs 4
+# Basic training command (start from pretrain weights, full parameter fine-tuning)
+python trainer/train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 
 # Multi-GPU training
-torchrun --nproc_per_node 2 train_sft_vlm.py --epochs 4
+torchrun --nproc_per_node 2 trainer/train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
+
+# Resume training from checkpoint
+python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
 ```
 
 **Output weights**: `./out/sft_vlm_*.pth`
@@ -158,7 +172,13 @@ torchrun --nproc_per_node 2 train_sft_vlm.py --epochs 4
 
 **Training Strategy**:
 - Freeze Visual Encoder (CLIP model) gradients
-- Set all parameters of Projection and LLM as learnable
+- Train Vision Projection layer (all parameters learnable)
+- Train LLM (all parameters learnable)
+
+**Key Parameters**:
+- `--from_weight pretrain_vlm`: Start from pretrain weights
+- `--from_resume 1`: Resume from checkpoint
+- `--save_weight sft_vlm`: Save weight prefix name
 
 **Loss Curve**:
 
@@ -178,7 +198,18 @@ python train_sft_vlm.py --epochs 4 --use_multi_image
 - Fine-tuning effect is limited, provided as a reference approach
 
 !!! warning "Training Notes"
-    By default, training process saves parameters every 100 steps to `./out/***.pth` (will overwrite old weight files)
+    **Training Features:**
+    
+    - **Checkpoint Resumption**: Add `--from_resume 1` parameter to continue from last interruption
+    - **GPU Count Changes**: Automatically convert steps when GPU count changes during resumption
+    - **Atomic Saving**: Use temporary file + replacement mechanism to prevent weight corruption
+    - **Dual File System**: Each save generates `out/**.pth` (model weights) and `checkpoints/**_resume.pth` (training state)
+    
+    **Resume Example:**
+    ```bash
+    # Resume training after interruption
+    python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
+    ```
 
 ## 📈 Model Architecture Details
 
@@ -238,11 +269,14 @@ Achieved by injecting multiple `<image>` placeholders, no framework modification
 Ensure the model `*.pth` file to be tested is in the `./out/` directory.
 
 ```bash
-# model_mode=0: test pretrain model
-python eval_vlm.py --model_mode 0
+# Test SFT model (default)
+python eval_vlm.py --weight sft_vlm
 
-# model_mode=1: test SFT model
-python eval_vlm.py --model_mode 1
+# Test pretrain model
+python eval_vlm.py --weight pretrain_vlm
+
+# Specify image directory
+python eval_vlm.py --weight sft_vlm --image_dir ./dataset/eval_images/
 ```
 
 ### Use Pre-Trained Model
@@ -313,6 +347,28 @@ Based on single NVIDIA 3090:
 - Use larger model (768 vs 512)
 - Use higher quality datasets
 - Adjust learning rate
+
+### 4. Checkpoint Resumption
+
+MiniMind-V now supports complete checkpoint resumption:
+
+- **Automatic Saving**: Training state saved every N steps (default 100)
+- **Easy Resumption**: Just add `--from_resume 1` to continue training
+- **GPU Flexibility**: Automatically adapts when GPU count changes
+- **Safe Storage**: Atomic file operations prevent corruption
+
+**Usage Example:**
+```bash
+# Start training
+python trainer/train_sft_vlm.py --epochs 10
+
+# Training interrupted at epoch 5...
+# Resume from checkpoint
+python trainer/train_sft_vlm.py --epochs 10 --from_resume 1
+
+# Resume with different GPU count (4 GPUs -> 2 GPUs)
+torchrun --nproc_per_node 2 trainer/train_sft_vlm.py --epochs 10 --from_resume 1
+```
 
 ## 🎓 Core Principles
 

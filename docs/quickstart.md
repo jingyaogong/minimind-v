@@ -63,8 +63,11 @@ git clone https://www.modelscope.cn/models/gongjy/MiniMind2-V.git
 ### Step 3: Command Line Q&A
 
 ```bash
-# load=0: load PyTorch model, load=1: load Transformers model
-python eval_vlm.py --load 1
+# load_from='model': load native PyTorch weights, load_from='other path': load transformers format
+python eval_vlm.py --load_from model --weight sft_vlm
+
+# Or use transformers format model
+python eval_vlm.py --load_from MiniMind2-V
 ```
 
 ### Step 4: Start WebUI (Optional)
@@ -120,8 +123,11 @@ Files needed:
 ### Run Testing
 
 ```bash
-# model_mode=0: test pretrain model, model_mode=1: test SFT model
-python eval_vlm.py --load 0 --model_mode 1
+# Test SFT model
+python eval_vlm.py --weight sft_vlm
+
+# Test pretrain model
+python eval_vlm.py --weight pretrain_vlm
 ```
 
 ## 📊 Model Architecture
