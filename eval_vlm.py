@@ -1,135 +1,73 @@
 import argparse
 import os
-import random
-import numpy as np
-import torch
 import warnings
+import torch
 from PIL import Image
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
 from model.model_vlm import MiniMindVLM, VLMConfig
-
+from trainer.trainer_utils import setup_seed
 warnings.filterwarnings('ignore')
 
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-
-def init_model(lm_config, device):
-    if args.load == 0:
-        tokenizer = AutoTokenizer.from_pretrained('./model')
-        moe_path = '_moe' if args.use_moe else ''
-        modes = {0: 'pretrain_vlm', 1: 'sft_vlm', 2: 'sft_vlm_multi'}
-        ckp = f'./{args.out_dir}/{modes[args.model_mode]}_{args.hidden_size}{moe_path}.pth'
-        model = MiniMindVLM(lm_config, vision_model_path="./model/vision_model/clip-vit-base-patch16")
-        state_dict = torch.load(ckp, map_location=device)
+def init_model(args):
+    tokenizer = AutoTokenizer.from_pretrained(args.load_from)
+    if args.load_from == 'model':
+        moe_suffix = '_moe' if args.use_moe else ''
+        ckp = f'./{args.save_dir}/{args.weight}_{args.hidden_size}{moe_suffix}.pth'
+        model = MiniMindVLM(
+            VLMConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers, use_moe=args.use_moe),
+            vision_model_path="./model/vision_model/clip-vit-base-patch16"
+        )
+        state_dict = torch.load(ckp, map_location=args.device)
         model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=False)
     else:
-        transformers_model_path = 'MiniMind2-Small-V'
-        tokenizer = AutoTokenizer.from_pretrained(transformers_model_path)
-        model = AutoModelForCausalLM.from_pretrained(transformers_model_path, trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(args.load_from, trust_remote_code=True)
         model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("./model/vision_model/clip-vit-base-patch16")
+    
+    print(f'VLM模型参数: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f} M(illion)')
+    preprocess = model.processor
+    return model.eval().to(args.device), tokenizer, preprocess
 
-    print(f'VLM参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
 
-    vision_model, preprocess = model.vision_encoder, model.processor
-    return model.eval().to(device), tokenizer, vision_model.eval().to(device), preprocess
-
-
-def setup_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
+def main():
+    parser = argparse.ArgumentParser(description="MiniMind-V Chat")
+    parser.add_argument('--load_from', default='model', type=str, help="模型加载路径（model=原生torch权重，其他路径=transformers格式）")
+    parser.add_argument('--save_dir', default='out', type=str, help="模型权重目录")
+    parser.add_argument('--weight', default='sft_vlm', type=str, help="权重名称前缀（pretrain_vlm, sft_vlm）")
+    parser.add_argument('--hidden_size', default=512, type=int, help="隐藏层维度（512=Small-26M, 768=Base-104M）")
+    parser.add_argument('--num_hidden_layers', default=8, type=int, help="隐藏层数量（Small=8, Base=16）")
+    parser.add_argument('--use_moe', default=False, type=bool, help="是否使用MoE架构")
+    parser.add_argument('--max_new_tokens', default=512, type=int, help="最大生成长度")
+    parser.add_argument('--temperature', default=0.65, type=float, help="生成温度，控制随机性（0-1，越大越随机）")
+    parser.add_argument('--top_p', default=0.85, type=float, help="nucleus采样阈值（0-1）")
+    parser.add_argument('--image_dir', default='./dataset/eval_images/', type=str, help="测试图像目录")
+    parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str, help="运行设备")
+    args = parser.parse_args()
+    
+    model, tokenizer, preprocess = init_model(args)
+    streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+    # 自动测试image_dir中的所有图像
+    prompt = "仔细看一下这张图：\n\n<image>\n\n描述一下这个图像的内容。"
+    for image_file in sorted(os.listdir(args.image_dir)):
+        if image_file.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+            setup_seed(2026) # or setup_seed(random.randint(1, 10000))
+            image_path = os.path.join(args.image_dir, image_file)
+            image = Image.open(image_path).convert('RGB')
+            pixel_values = MiniMindVLM.image2tensor(image, preprocess).to(args.device).unsqueeze(0)
+            
+            messages = [{"role": "user", "content": prompt.replace('<image>', model.params.image_special_token)}]
+            inputs_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            inputs = tokenizer(inputs_text, return_tensors="pt", truncation=True).to(args.device)
+            
+            print(f'[图像]: {image_file}')
+            print(f'👶: {prompt.replace('\n', '\\n')}')
+            print('🤖️: ', end='')
+            model.generate(
+                inputs=inputs["input_ids"], attention_mask=inputs["attention_mask"],
+                max_new_tokens=args.max_new_tokens, do_sample=True, streamer=streamer,
+                pad_token_id=tokenizer.pad_token_id, eos_token_id=tokenizer.eos_token_id,
+                top_p=args.top_p, temperature=args.temperature, pixel_values=pixel_values
+            )
+            print('\n\n')
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Chat with MiniMind")
-    parser.add_argument('--lora_name', default='None', type=str)
-    parser.add_argument('--out_dir', default='out', type=str)
-    parser.add_argument('--temperature', default=0.65, type=float)
-    parser.add_argument('--top_p', default=0.85, type=float)
-    parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str)
-    # MiniMind2-Small (26M)：(hidden_size=512, num_hidden_layers=8)
-    # MiniMind2 (104M)：(hidden_size=768, num_hidden_layers=16)
-    parser.add_argument('--hidden_size', default=512, type=int)
-    parser.add_argument('--num_hidden_layers', default=8, type=int)
-    parser.add_argument('--max_seq_len', default=8192, type=int)
-    parser.add_argument('--use_moe', default=False, type=bool)
-    # 默认单图推理，设置为2为多图推理
-    parser.add_argument('--use_multi', default=1, type=int)
-    parser.add_argument('--stream', default=True, type=bool)
-    parser.add_argument('--load', default=1, type=int, help="0: 原生torch权重，1: transformers加载")
-    parser.add_argument('--model_mode', default=1, type=int,
-                        help="0: Pretrain模型，1: SFT模型，2: SFT-多图模型 (beta拓展)")
-    args = parser.parse_args()
-
-    lm_config = VLMConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers,
-                          max_seq_len=args.max_seq_len, use_moe=args.use_moe)
-    model, tokenizer, vision_model, preprocess = init_model(lm_config, args.device)
-    streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-
-
-    def chat_with_vlm(prompt, pixel_values, image_names):
-        messages = [{"role": "user", "content": prompt}]
-        new_prompt = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True
-        )[-args.max_seq_len + 1:]
-
-        inputs = tokenizer(
-            new_prompt,
-            return_tensors="pt",
-            truncation=True
-        ).to(args.device)
-
-        print(f'[Image]: {image_names}')
-        print('🤖️: ', end='')
-        generated_ids = model.generate(
-            inputs["input_ids"],
-            max_new_tokens=args.max_seq_len,
-            num_return_sequences=1,
-            do_sample=True,
-            attention_mask=inputs["attention_mask"],
-            pad_token_id=tokenizer.pad_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-            streamer=streamer,
-            top_p=args.top_p,
-            temperature=args.temperature,
-            pixel_values=pixel_values
-        )
-
-        response = tokenizer.decode(generated_ids[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
-        messages.append({"role": "assistant", "content": response})
-        print('\n\n')
-
-
-    # 单图推理：每1个图像单独推理
-    if args.use_multi == 1:
-        image_dir = './dataset/eval_images/'
-        prompt = f"{model.params.image_special_token}\n描述一下这个图像的内容。"
-
-        for image_file in os.listdir(image_dir):
-            image = Image.open(os.path.join(image_dir, image_file)).convert('RGB')
-            pixel_tensors = MiniMindVLM.image2tensor(image, preprocess).to(args.device).unsqueeze(0)
-            chat_with_vlm(prompt, pixel_tensors, image_file)
-
-    # 2图推理：目录下的两个图像编码，一次性推理（power by ）
-    if args.use_multi == 2:
-        args.model_mode = 2
-        image_dir = './dataset/eval_multi_images/bird/'
-        prompt = (f"{lm_config.image_special_token}\n"
-                  f"{lm_config.image_special_token}\n"
-                  f"比较一下两张图像的异同点。")
-        pixel_tensors_multi = []
-        for image_file in os.listdir(image_dir):
-            image = Image.open(os.path.join(image_dir, image_file)).convert('RGB')
-            pixel_tensors_multi.append(MiniMindVLM.image2tensor(image, preprocess))
-        pixel_tensors = torch.cat(pixel_tensors_multi, dim=0).to(args.device).unsqueeze(0)
-        # 同样内容重复10次
-        for _ in range(10):
-            chat_with_vlm(prompt, pixel_tensors, (', '.join(os.listdir(image_dir))))
+    main()
