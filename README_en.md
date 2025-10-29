@@ -769,12 +769,9 @@ significant.
 
 ## 🤝 [Contributors](https://github.com/jingyaogong/minimind/graphs/contributors)
 
-<a href="https://github.com/jingyaogong"><img src="https://avatars.githubusercontent.com/u/62287848" width="70px" height="70px"/></a>
-&nbsp;
-<a href="https://github.com/xinyanghuang7"><img src="https://avatars.githubusercontent.com/u/7503252" width="70px" height="70px"/></a>
-&nbsp;
-<a href="https://github.com/chuanzhubin"><img src="https://avatars.githubusercontent.com/u/2813798" width="70px" height="70px"/></a>
-&nbsp;
+<a href="https://github.com/jingyaogong/minimind/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=jingyaogong/minimind-v" />
+</a>
 
 ## 😊 Acknowledgments
 
