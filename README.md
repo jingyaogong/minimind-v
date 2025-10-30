@@ -71,7 +71,7 @@
 ### 👉**最近更新**
 
 <details close> 
-<summary> <b>2025-10-24 (newest 🎉)</b> </summary>
+<summary> <b>2025-10-24</b> </summary>
 
 - bug修复：模型权重不对应
 - 适配[「minimind-1024更新」](https://github.com/jingyaogong/minimind)

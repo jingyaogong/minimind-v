@@ -76,7 +76,7 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 ### 👉**Recent Updates**
 
 <details close> 
-<summary> <b>2025-10-24 (newest 🎉)</b> </summary>
+<summary> <b>2025-10-24</b> </summary>
 
 - Bug fix: model weights mismatch
 - Adapted to ["minimind-1024 update"](https://github.com/jingyaogong/minimind)
