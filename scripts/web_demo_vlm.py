@@ -19,18 +19,15 @@ warnings.filterwarnings('ignore')
 
 
 def init_model(lm_config):
-    tokenizer = AutoTokenizer.from_pretrained('../model')
-
-    if args.load == 0:
+    tokenizer = AutoTokenizer.from_pretrained(args.load_from)
+    if 'model' in args.load_from:
         moe_path = '_moe' if lm_config.use_moe else ''
-        ckp = f'../out/sft_vlm_{lm_config.hidden_size}{moe_path}.pth'
+        ckp = f'../{args.save_dir}/{args.weight}_{lm_config.hidden_size}{moe_path}.pth'
         model = MiniMindVLM(lm_config, vision_model_path="../model/vision_model/clip-vit-base-patch16")
         state_dict = torch.load(ckp, map_location=args.device)
         model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=False)
     else:
-        transformers_model_path = '../MiniMind2-V'
-        tokenizer = AutoTokenizer.from_pretrained(transformers_model_path)
-        model = AutoModelForCausalLM.from_pretrained(transformers_model_path, trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(args.load_from, trust_remote_code=True)
         model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("../model/vision_model/clip-vit-base-patch16")
 
     print(f'VLM参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
@@ -182,20 +179,20 @@ def launch_gradio_server(server_name="0.0.0.0", server_port=7788):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Chat with MiniMind")
-    parser.add_argument('--lora_name', default='None', type=str)
-    parser.add_argument('--out_dir', default='out', type=str)
-    parser.add_argument('--temperature', default=0.65, type=float)
-    parser.add_argument('--top_p', default=0.85, type=float)
-    parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str)
-    parser.add_argument('--hidden_size', default=512, type=int)
-    parser.add_argument('--num_hidden_layers', default=8, type=int)
-    parser.add_argument('--max_seq_len', default=8192, type=int)
-    parser.add_argument('--use_moe', default=False, type=bool)
-    parser.add_argument('--stream', default=True, type=bool)
-    parser.add_argument('--load', default=1, type=int, help="0: 原生torch权重，1: transformers加载")
+    parser.add_argument('--load_from', default='../model', type=str, help="模型加载路径（model=原生torch权重，其他路径=transformers格式）")
+    parser.add_argument('--save_dir', default='out', type=str, help="模型权重目录")
+    parser.add_argument('--weight', default='sft_vlm', type=str, help="权重名称前缀（pretrain_vlm, sft_vlm）")
+    parser.add_argument('--temperature', default=0.65, type=float, help="生成温度，控制随机性（0-1，越大越随机）")
+    parser.add_argument('--top_p', default=0.85, type=float, help="nucleus采样阈值（0-1）")
+    parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str, help="运行设备")
+    parser.add_argument('--hidden_size', default=512, type=int, help="隐藏层维度（512=Small-26M, 768=Base-104M）")
+    parser.add_argument('--num_hidden_layers', default=8, type=int, help="隐藏层数量（Small=8, Base=16）")
+    parser.add_argument('--max_seq_len', default=8192, type=int, help="最大序列长度")
+    parser.add_argument('--use_moe', default=0, type=int, choices=[0, 1], help="是否使用MoE架构（0=否，1=是）")
+    parser.add_argument('--stream', default=1, type=int, choices=[0, 1], help="是否使用流式输出（0=否，1=是）")
     args = parser.parse_args()
 
     lm_config = VLMConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers,
-                          max_seq_len=args.max_seq_len, use_moe=args.use_moe)
+                          max_seq_len=args.max_seq_len, use_moe=bool(args.use_moe))
     model, tokenizer, vision_model, preprocess = init_model(lm_config)
     launch_gradio_server(server_name="0.0.0.0", server_port=8888)

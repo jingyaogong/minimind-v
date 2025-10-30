@@ -100,12 +100,12 @@ if __name__ == "__main__":
     parser.add_argument('--hidden_size', default=512, type=int, help="隐藏层维度")
     parser.add_argument('--num_hidden_layers', default=8, type=int, help="隐藏层数量")
     parser.add_argument('--max_seq_len', default=640, type=int, help="训练的最大截断长度")
-    parser.add_argument('--use_moe', default=False, type=bool, help="是否使用MoE")
+    parser.add_argument('--use_moe', default=0, type=int, choices=[0, 1], help="是否使用MoE架构（0=否，1=是）")
     parser.add_argument("--data_path", type=str, default="../dataset/pretrain_data.jsonl", help="训练数据路径")
     parser.add_argument("--images_path", type=str, default="../dataset/pretrain_images", help="训练图像路径")
     parser.add_argument('--from_weight', default='llm', type=str, help="基于哪个权重训练，为none则不基于任何权重训练")
-    parser.add_argument('--from_resume', default=0, type=int, help="是否自动检测&续训，0否1是")
-    parser.add_argument('--freeze_llm', default=True, type=bool, help="是否冻结LLM参数（仅训练vision_proj）")
+    parser.add_argument('--from_resume', default=0, type=int, choices=[0, 1], help="是否自动检测&续训（0=否，1=是）")
+    parser.add_argument('--freeze_llm', default=1, type=int, choices=[0, 1], help="是否冻结LLM参数（0=否，1=是，仅训练vision_proj）")
     parser.add_argument("--use_wandb", action="store_true", help="是否使用wandb")
     parser.add_argument("--wandb_project", type=str, default="MiniMind-V-Pretrain", help="wandb项目名")
     args = parser.parse_args()
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     # ========== 2. 配置目录、模型参数、检查ckp ==========
     os.makedirs(args.save_dir, exist_ok=True)
     vlm_config = VLMConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers, 
-                           max_seq_len=args.max_seq_len, use_moe=args.use_moe)
+                           max_seq_len=args.max_seq_len, use_moe=bool(args.use_moe))
     ckp_data = vlm_checkpoint(vlm_config, weight=args.save_weight, save_dir='../checkpoints') if args.from_resume==1 else None
     
     # ========== 3. 设置混合精度 ==========
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     
     # ========== 5. 定义模型、数据、优化器 ==========
     model, tokenizer, preprocess = init_vlm_model(vlm_config, from_weight=args.from_weight, 
-                                                   device=args.device, freeze_llm=args.freeze_llm)
+                                                   device=args.device, freeze_llm=bool(args.freeze_llm))
     train_ds = VLMDataset(args.data_path, args.images_path, tokenizer, preprocess=preprocess,
                           image_special_token=vlm_config.image_special_token,
                           max_length=vlm_config.max_seq_len)
