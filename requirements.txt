@@ -25,7 +25,7 @@ trl==0.13.0
 ujson==5.1.0
 wandb==0.18.3
 streamlit==1.50.0
-gradio==5.0.0b5
+gradio==5.49.0
 swanlab==0.6.12
 torch==2.6.0
 torchvision==0.21.0
