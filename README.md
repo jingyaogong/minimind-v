@@ -100,8 +100,11 @@
 
 </details>
 
-<details close> 
-<summary> <b>2024-10-05</b> </summary>
+<details close>
+
+<summary> <b>More...</b> </summary>
+
+**2024-10-05**
 
 - MiniMind-V如期而至，首次开源
 
@@ -779,6 +782,19 @@ LLM性能越强，对应的VLM必然越强，此时效果增益会很明显。
   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=jingyaogong/minimind-v&type=Date"/>
   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=jingyaogong/minimind-v&type=Date"/>
 </picture>
+
+# 🎓 Citation
+
+If you find MiniMind-V helpful in your research or work, please cite:
+
+```bibtex
+@misc{minimind,
+  title={MiniMind-V: Train a Tiny VLM from scratch},
+  author={Jingyao Gong},
+  year={2024},
+  howpublished={https://github.com/jingyaogong/minimind-v}
+}
+```
 
 # License
 
