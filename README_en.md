@@ -240,7 +240,7 @@ Please reserve about 5GB of space for the dataset. If there is insufficient spac
 
 ```bash
 # Basic training command (start from LLM weights, train vision_proj only)
-python trainer/train_pretrain_vlm.py --epochs 4 --from_weight llm
+python train_pretrain_vlm.py --epochs 4 --from_weight llm
 ```
 
 > Run pretraining to get `pretrain_vlm_*.pth` as the pretrained model's output weights (* represents the model
@@ -250,7 +250,7 @@ python trainer/train_pretrain_vlm.py --epochs 4 --from_weight llm
 
 ```bash
 # Basic training command (start from pretrain weights, full parameter fine-tuning)
-python trainer/train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
+python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
 > Perform supervised fine-tuning to get `sft_vlm_*.pth` as the output weights for the fine-tuned model.
@@ -266,7 +266,7 @@ python trainer/train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 
 ```bash
 # To resume training after interruption, use the same command and add --from_resume 1
-python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
+python train_sft_vlm.py --epochs 4 --from_resume 1
 ```
 
 **Parameter Description:**

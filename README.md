@@ -232,7 +232,7 @@ unzip sft_images.zip && rm sft_images.zip
 
 ```bash
 # 基础训练命令（从LLM权重开始，仅训练vision_proj）
-python trainer/train_pretrain_vlm.py --epochs 4 --from_weight llm
+python train_pretrain_vlm.py --epochs 4 --from_weight llm
 ```
 
 > 执行预训练，得到 `pretrain_vlm_*.pth` 作为预训练的输出权重（其中*为模型的dimension，默认为512）
@@ -242,7 +242,7 @@ python trainer/train_pretrain_vlm.py --epochs 4 --from_weight llm
 
 ```bash
 # 基础训练命令（从预训练权重开始，全参数微调）
-python trainer/train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
+python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
 > 执行监督微调，得到 `sft_vlm_*.pth` 作为指令微调的输出权重
@@ -258,7 +258,7 @@ python trainer/train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 
 ```bash
 # 训练中断后，使用相同命令并添加 --from_resume 1
-python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
+python train_sft_vlm.py --epochs 4 --from_resume 1
 ```
 
 **参数说明：**
