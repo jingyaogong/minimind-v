@@ -162,8 +162,6 @@ class MiniMindVLM(MiniMindForCausalLM):
         )
         slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
         logits = self.lm_head(hidden_states[:, slice_indices, :])
-        self.OUT.__setitem__('last_hidden_state', hidden_states)
-        self.OUT.__setitem__('logits', logits)
-        self.OUT.__setitem__('aux_loss', aux_loss)
-        self.OUT.__setitem__('past_key_values', presents)
-        return self.OUT
+        output = CausalLMOutputWithPast(logits=logits, past_key_values=presents, hidden_states=hidden_states)
+        output.aux_loss = aux_loss
+        return output
