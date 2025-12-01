@@ -87,7 +87,7 @@ def vlm_checkpoint(vlm_config, weight='pretrain_vlm', model=None, optimizer=None
         # 移除vision_encoder参数（不需要保存，因为是预训练的）
         clean_state_dict = {k: v for k, v in state_dict.items() if not k.startswith('vision_encoder.')}
         ckp_tmp = ckp_path + '.tmp'
-        torch.save({k: v.half() for k, v in clean_state_dict.items()}, ckp_tmp)
+        torch.save({k: v.half().cpu() for k, v in clean_state_dict.items()}, ckp_tmp)
         os.replace(ckp_tmp, ckp_path)
         
         wandb_id = None
@@ -119,6 +119,9 @@ def vlm_checkpoint(vlm_config, weight='pretrain_vlm', model=None, optimizer=None
         resume_tmp = resume_path + '.tmp'
         torch.save(resume_data, resume_tmp)
         os.replace(resume_tmp, resume_path)
+        del state_dict, clean_state_dict, resume_data
+        gc.collect()
+        torch.cuda.empty_cache()
     else:  # 加载模式
         if os.path.exists(resume_path):
             ckp_data = torch.load(resume_path, map_location='cpu')

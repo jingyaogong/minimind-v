@@ -76,11 +76,12 @@ def train_epoch(epoch, loader, iters, start_step=0, wandb=None):
             clean_state_dict = {
                 key: value for key, value in state_dict.items() if not key.startswith('vision_encoder.')
             }
-            clean_state_dict = {k: v.half() for k, v in clean_state_dict.items()}  # 半精度保存
+            clean_state_dict = {k: v.half().cpu() for k, v in clean_state_dict.items()}  # 半精度保存并移到CPU
             torch.save(clean_state_dict, ckp)
             vlm_checkpoint(vlm_config, weight=args.save_weight, model=model, optimizer=optimizer, 
                          epoch=epoch, step=step, wandb=wandb, save_dir='../checkpoints', scaler=scaler)
             model.train()
+            del state_dict, clean_state_dict
 
         del X, Y, loss_mask, pixel_values, res, loss
         torch.cuda.empty_cache()
