@@ -4,6 +4,7 @@
 import os
 import random
 import math
+import gc
 import numpy as np
 import torch
 import torch.distributed as dist
