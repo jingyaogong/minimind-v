@@ -214,23 +214,21 @@ and place it under `./dataset`.
 <details style="color:rgb(128,128,128)">
 <summary>Note: Dataset Details</summary>
 
+**[Note 1]** Previously, extracting 500k fragmented image files could be very slow. From 2025-12-27, dataset format is unified to Parquet with image-text integrated storage, smaller size, no decompression needed, faster loading.
+
+**[Note 2]** Parquet is a columnar storage format supporting efficient compression and fast reading. To preview data content, run `python lm_dataset.py` in the `dataset/` directory to visualize the first 5 image-text pairs.
+
 Pretrain data:
 ```bash
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_data.jsonl
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_images.zip
-unzip pretrain_images.zip && rm pretrain_images.zip
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_data.parquet
 ```
 
 SFT data:
 ```bash
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_data.jsonl
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_images.zip
-unzip sft_images.zip && rm sft_images.zip
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_data.parquet
 ```
 
-`*.jsonl` contains Q&A text, and `*images` are the accompanying image data. After downloading, decompress the image data.
-
-Please reserve about 5GB of space for the dataset. If there is insufficient space for pretrain data, you can try skipping the pretrain training step and proceed directly to SFT training.
+Please reserve about ~2GB of space for the dataset. If there is insufficient space for pretrain data, you can try skipping the pretrain training step and proceed directly to SFT training.
 
 </details>
 
@@ -450,77 +448,6 @@ output is no different from that of the LLM part.
 
 ![input](./images/minimind-v-input.png)
 
-For handling multiple images at once, this can be achieved by injecting multiple `<image>` placeholders without needing
-to modify the framework at all.
-
-<details>
-<summary> Expansion Ideas for Video Understanding </summary>
-
-written by [@xinyanghuang7](https://github.com/xinyanghuang7)
-
-For the video understanding capabilities of multimodal large models, one feasible approach is to refer to the existing
-MiniCPM-V 2.6 Python example for video understanding.
-The main idea is to extract key frames from the video and then perform multi-image inference.
-Therefore, if you want to add video understanding capabilities to MiniMind-V, you can base it on the existing
-multi-image training, refer to the key frame extraction method in this Python script, and increase the number of images
-supported in the training files.
-The more MAX_NUM_FRAMES supported, the more GPU memory it will consume.
-
-```text
-import torch
-from PIL import Image
-from transformers import AutoModel, AutoTokenizer
-from decord import VideoReader, cpu  # pip install decord
-
-model = AutoModel.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True,
-                                  attn_implementation='sdpa',
-                                  torch_dtype=torch.bfloat16)  # sdpa or flash_attention_2, no eager
-model = model.eval().cuda()
-tokenizer = AutoTokenizer.from_pretrained('openbmb/MiniCPM-V-2_6', trust_remote_code=True)
-
-MAX_NUM_FRAMES = 64  # if cuda OOM set a smaller number
-
-
-def encode_video(video_path):
-    def uniform_sample(l, n):
-        gap = len(l) / n
-        idxs = [int(i * gap + gap / 2) for i in range(n)]
-        return [l[i] for i in idxs]
-
-    vr = VideoReader(video_path, ctx=cpu(0))
-    sample_fps = round(vr.get_avg_fps() / 1)  # FPS
-    frame_idx = [i for i in range(0, len(vr), sample_fps)]
-    if len(frame_idx) > MAX_NUM_FRAMES:
-        frame_idx = uniform_sample(frame_idx, MAX_NUM_FRAMES)
-    frames = vr.get_batch(frame_idx).asnumpy()
-    frames = [Image.fromarray(v.astype('uint8')) for v in frames]
-    print('num frames:', len(frames))
-    return frames
-
-
-video_path = "video_test.mp4"
-frames = encode_video(video_path)
-question = "Describe the video"
-msgs = [
-    {'role': 'user', 'content': frames + [question]},
-]
-
-# Set decode params for video
-params = {}
-params["use_image_id"] = False
-params["max_slice_nums"] = 2  # If cuda OOM and video resolution is greater than 448*448, set to 1
-
-answer = model.chat(
-    image=None,
-    msgs=msgs,
-    tokenizer=tokenizer,
-    **params
-)
-print(answer)
-```
-
-</details>
-
 At this point, all the details of `MiniMind-V` have been presented.
 The `MiniMind-V` model subclass completely inherits from `MiniMind`,
 and is generated with **minimal** changes based on the latter,
@@ -573,34 +500,6 @@ The Q&A content has been translated, with better support for Chinese, further or
 }
 ```
 
-(sft_vlm_data_multi.jsonl) Multi-image instruction fine-tuning dataset format:
-
-```json lines
-{
-  "conversations": [
-    {
-      "role": "user",
-      "content": "context: Source Image: <image> Target Image: <image> Instruction: What is the correct image edit instruction that can transform the source image to target image?<image>"
-    },
-    {
-      "role": "assistant",
-      "content": "take the people out of the back in the photo. Remove the two people behind the woman in the white dress and the man in the blue suit. remove people behind the couple in the center"
-    }
-  ],
-  "image": "0.jpg, 1.jpg"
-}
-```
-
-<details>
-<summary> Data Description </summary>
-
-* The multi-image dataset is relatively small and contains English conversations, focusing only on scenes with two image
-  comparisons. Therefore, the fine-tuning effect is limited, and this is just one reference approach.
-
-* `jsonl` contains textual instructions, and `images.zip` contains the corresponding image data (to be unzipped after
-  download).
-
-</details>
 
 Dataset download
 link: ([ModelScope](https://www.modelscope.cn/datasets/gongjy/minimind-v_dataset) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))
@@ -615,10 +514,6 @@ Pre-training learns general image knowledge from a dataset of 595K samples, such
 
 Instruction fine-tuning learns the real Q&A format for image-related questions from a dataset of 300K real
 conversations, which better aligns with human communication habits.
-
-> train_sft_vlm
-
-Multi-image fine-tuning provides a demo: a bird comparison dataset with 13.6k real Q&A formats.
 
 During training, the visual encoder, i.e., the CLIP model's gradients, are frozen, and only the Projection and LLM parts
 are trained.  
@@ -726,27 +621,6 @@ Download link:
   </tbody>
 </table>
 
-#### Multiple Image Dialogue (Effect is Limited)
-
-<table>
-  <thead>
-    <tr>
-      <th>Image1</th>
-      <th>Image2</th>
-      <th>512_sft_multi</th>
-      <th>768_sft_multi</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><img src="./dataset/eval_multi_images/bird/0.jpg" alt="a-bird.png"></td>
-      <td><img src="./dataset/eval_multi_images/bird/1.jpg" alt="a-bird.png"></td>
-      <td>This image displays a bird scenario: a woman standing with a red and green mixed purple bird perched on her. The woman stands with the bird on her shoulders, while the red bird on her collar stands behind her.</td>
-      <td>The two birds are flying in the same forest, some are in the center of the image, while others are smaller, creating a contrast. The birds’ presence highlights their flight ability and adaptability as they swiftly move through the woods. Additionally, the birds’ positions vary, with one on the left and the other on the right, indicating they are moving close within the same forest. Their natural behavior helps distinguish the two bird species.</td>
-    </tr>
-  </tbody>
-</table>
-
 ### Effect Summary:
 
 Visual signals are treated as a special foreign language by LLMs, so the "language learning" ability highly depends on
@@ -778,8 +652,7 @@ significant.
 
 ## 😊 Acknowledgments
 
-<a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>:
-<a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">🔗Implemented complete multi-graph branch</a>
+<a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>: <a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">Multi-image VLM branch</a> | <a href="https://github.com/jingyaogong/minimind-v/tree/32cf4c5c01337231fd907b92d513de8945594263">Repository provided up to this version</a> 
 
 <details close> 
 <summary> <b>Reference Links & Thanks to the following excellent papers or projects</b> </summary>
