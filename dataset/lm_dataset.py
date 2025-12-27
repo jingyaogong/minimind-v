@@ -76,6 +76,7 @@ class VLMDataset(Dataset):
 
         return X, Y, loss_mask, image_tensor
 
+# 测试parquet数据读取和可视化
 if __name__ == '__main__':
     import matplotlib.pyplot as plt; plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei']
     for path in ['pretrain_data.parquet', 'sft_data.parquet']:
