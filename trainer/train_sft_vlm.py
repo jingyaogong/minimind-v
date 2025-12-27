@@ -84,7 +84,6 @@ def train_epoch(epoch, loader, iters, start_step=0, wandb=None):
             del state_dict, clean_state_dict
 
         del X, Y, loss_mask, pixel_values, res, loss
-        torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
@@ -100,13 +99,12 @@ if __name__ == "__main__":
     parser.add_argument("--accumulation_steps", type=int, default=1, help="梯度累积步数")
     parser.add_argument("--grad_clip", type=float, default=1.0, help="梯度裁剪阈值")
     parser.add_argument("--log_interval", type=int, default=100, help="日志打印间隔")
-    parser.add_argument("--save_interval", type=int, default=100, help="模型保存间隔")
+    parser.add_argument("--save_interval", type=int, default=1000, help="模型保存间隔")
     parser.add_argument('--hidden_size', default=512, type=int, help="隐藏层维度")
     parser.add_argument('--num_hidden_layers', default=8, type=int, help="隐藏层数量")
     parser.add_argument('--max_seq_len', default=1536, type=int, help="训练的最大截断长度")
     parser.add_argument('--use_moe', default=0, type=int, choices=[0, 1], help="是否使用MoE架构（0=否，1=是）")
-    parser.add_argument("--data_path", type=str, default="../dataset/sft_data.jsonl", help="训练数据路径")
-    parser.add_argument("--images_path", type=str, default="../dataset/sft_images", help="训练图像路径")
+    parser.add_argument("--data_path", type=str, default="../dataset/sft_data.parquet", help="训练数据路径")
     parser.add_argument('--from_weight', default='pretrain_vlm', type=str, help="基于哪个权重训练，为none则不基于任何权重训练")
     parser.add_argument('--from_resume', default=0, type=int, choices=[0, 1], help="是否自动检测&续训（0=否，1=是）")
     parser.add_argument("--use_wandb", action="store_true", help="是否使用wandb")
@@ -141,7 +139,7 @@ if __name__ == "__main__":
     # ========== 5. 定义模型、数据、优化器 ==========
     model, tokenizer, preprocess = init_vlm_model(vlm_config, from_weight=args.from_weight, 
                                                    device=args.device)
-    train_ds = VLMDataset(args.data_path, args.images_path, tokenizer, preprocess=preprocess,
+    train_ds = VLMDataset(args.data_path, tokenizer, preprocess=preprocess,
                           image_special_token=vlm_config.image_special_token,
                           max_length=vlm_config.max_seq_len)
     train_sampler = DistributedSampler(train_ds) if dist.is_initialized() else None

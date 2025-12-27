@@ -65,11 +65,11 @@ def init_vlm_model(vlm_config, from_weight='pretrain_vlm', tokenizer_path='../mo
             if 'vision_proj' not in name:
                 param.requires_grad = False
     
-    # 默认全参训练时的可选配置（已注释）
-    # # 只解冻注意力机制中的投影层参数
-    # for name, param in model.model.named_parameters():
-    #     if any(proj in name for proj in ['q_proj', 'k_proj', 'v_proj', 'o_proj']):
-    #         param.requires_grad = True
+    # pretrain阶段：解冻最后1层
+    last_layer_idx = vlm_config.num_hidden_layers - 1
+    for name, param in model.model.named_parameters():
+        if f'layers.{last_layer_idx}.' in name:
+            param.requires_grad = True
     
     Logger(f'所加载VLM Model可训练参数：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
     preprocess = model.processor
@@ -121,7 +121,6 @@ def vlm_checkpoint(vlm_config, weight='pretrain_vlm', model=None, optimizer=None
         torch.save(resume_data, resume_tmp)
         os.replace(resume_tmp, resume_path)
         del state_dict, clean_state_dict, resume_data
-        gc.collect()
         torch.cuda.empty_cache()
     else:  # 加载模式
         if os.path.exists(resume_path):
