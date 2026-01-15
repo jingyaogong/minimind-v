@@ -1,3 +1,4 @@
+import time
 import argparse
 import os
 import warnings
@@ -5,7 +6,7 @@ import torch
 from PIL import Image
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
 from model.model_vlm import MiniMindVLM, VLMConfig
-from trainer.trainer_utils import setup_seed
+from trainer.trainer_utils import setup_seed, get_model_params
 warnings.filterwarnings('ignore')
 
 def init_model(args):
@@ -22,8 +23,7 @@ def init_model(args):
     else:
         model = AutoModelForCausalLM.from_pretrained(args.load_from, trust_remote_code=True)
         model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("./model/vision_model/clip-vit-base-patch16")
-    
-    print(f'VLM模型参数: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f} M(illion)')
+    get_model_params(model, model.params)
     preprocess = model.processor
     return model.eval().to(args.device), tokenizer, preprocess
 
@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--temperature', default=0.65, type=float, help="生成温度，控制随机性（0-1，越大越随机）")
     parser.add_argument('--top_p', default=0.85, type=float, help="nucleus采样阈值（0-1）")
     parser.add_argument('--image_dir', default='./dataset/eval_images/', type=str, help="测试图像目录")
+    parser.add_argument('--show_speed', default=1, type=int, help="显示decode速度（tokens/s）")
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str, help="运行设备")
     args = parser.parse_args()
     
@@ -59,15 +60,17 @@ def main():
             inputs = tokenizer(inputs_text, return_tensors="pt", truncation=True).to(args.device)
             
             print(f'[图像]: {image_file}')
-            print(f'👶: {prompt.replace('\n', '\\n')}')
-            print('🤖️: ', end='')
-            model.generate(
+            print(f'💬: {prompt.replace('\n', '\\n')}')
+            print('🤖: ', end='')
+            st = time.time()
+            generated_ids = model.generate(
                 inputs=inputs["input_ids"], attention_mask=inputs["attention_mask"],
                 max_new_tokens=args.max_new_tokens, do_sample=True, streamer=streamer,
                 pad_token_id=tokenizer.pad_token_id, eos_token_id=tokenizer.eos_token_id,
                 top_p=args.top_p, temperature=args.temperature, pixel_values=pixel_values
             )
-            print('\n\n')
+            gen_tokens = len(generated_ids[0]) - len(inputs["input_ids"][0])
+            print(f'\n[Speed]: {gen_tokens / (time.time() - st):.2f} tokens/s\n\n') if args.show_speed else print('\n\n')
 
 if __name__ == "__main__":
     main()

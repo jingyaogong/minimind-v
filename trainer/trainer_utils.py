@@ -2,16 +2,32 @@
 训练工具函数集合
 """
 import os
+import sys
+__package__ = "trainer"
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import random
 import math
-import gc
 import numpy as np
 import torch
 import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import Sampler
 from transformers import AutoTokenizer
 from model.model_vlm import MiniMindVLM
-    
+
+
+def get_model_params(model, config, ignore_patterns=['vision_encoder']):
+    def should_count(n): return not any(p in n for p in ignore_patterns)
+    total = sum(p.numel() for n, p in model.named_parameters() if should_count(n)) / 1e6
+    n_routed = getattr(config, 'n_routed_experts', getattr(config, 'num_experts', 0))
+    n_active = getattr(config, 'num_experts_per_tok', 0)
+    n_shared = getattr(config, 'n_shared_experts', 0)
+    expert = sum(p.numel() for n, p in model.named_parameters() if 'mlp.experts.0.' in n and should_count(n)) / 1e6
+    shared_expert = sum(p.numel() for n, p in model.named_parameters() if 'mlp.shared_experts.0.' in n and should_count(n)) / 1e6
+    base = total - (expert * n_routed) - (shared_expert * n_shared)
+    active = base + (expert * n_active) + (shared_expert * n_shared)
+    if active < total: Logger(f'Model Params: {total:.2f}M-A{active:.2f}M')
+    else: Logger(f'Model Params: {total:.2f}M')
 
 
 def is_main_process():
@@ -24,7 +40,7 @@ def Logger(content):
 
 
 def get_lr(current_step, total_steps, lr):
-    return lr / 10 + 0.5 * lr * (1 + math.cos(math.pi * current_step / total_steps))
+    return lr*(0.1 + 0.45*(1 + math.cos(math.pi * current_step / total_steps)))
 
 
 def init_distributed_mode():
@@ -70,8 +86,9 @@ def init_vlm_model(vlm_config, from_weight='pretrain_vlm', tokenizer_path='../mo
     for name, param in model.model.named_parameters():
         if f'layers.{last_layer_idx}.' in name:
             param.requires_grad = True
-    
-    Logger(f'所加载VLM Model可训练参数：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
+
+    get_model_params(model, vlm_config)
+    Logger(f'Trainable Params: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f}M')
     preprocess = model.processor
     return model.to(device), tokenizer, preprocess
 
@@ -83,8 +100,9 @@ def vlm_checkpoint(vlm_config, weight='pretrain_vlm', model=None, optimizer=None
     resume_path = f'{save_dir}/{weight}_{vlm_config.hidden_size}{moe_path}_resume.pth'
     
     if model is not None:
-        from torch.nn.parallel import DistributedDataParallel
-        state_dict = model.module.state_dict() if isinstance(model, DistributedDataParallel) else model.state_dict()
+        raw_model = model.module if isinstance(model, DistributedDataParallel) else model
+        raw_model = getattr(raw_model, '_orig_mod', raw_model)
+        state_dict = raw_model.state_dict()
         # 移除vision_encoder参数（不需要保存，因为是预训练的）
         clean_state_dict = {k: v for k, v in state_dict.items() if not k.startswith('vision_encoder.')}
         ckp_tmp = ckp_path + '.tmp'
@@ -110,10 +128,9 @@ def vlm_checkpoint(vlm_config, weight='pretrain_vlm', model=None, optimizer=None
         for key, value in kwargs.items():
             if value is not None:
                 if hasattr(value, 'state_dict'):
-                    if isinstance(value, DistributedDataParallel):
-                        resume_data[key] = value.module.state_dict()
-                    else:
-                        resume_data[key] = value.state_dict()
+                    raw_value = value.module if isinstance(value, DistributedDataParallel) else value
+                    raw_value = getattr(raw_value, '_orig_mod', raw_value)
+                    resume_data[key] = raw_value.state_dict()
                 else:
                     resume_data[key] = value
         

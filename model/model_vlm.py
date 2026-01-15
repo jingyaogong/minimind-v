@@ -113,6 +113,7 @@ class MiniMindVLM(MiniMindForCausalLM):
     def forward(self,
                 input_ids: Optional[torch.Tensor] = None,
                 attention_mask: Optional[torch.Tensor] = None,
+                labels: Optional[torch.Tensor] = None,
                 past_key_values: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
                 use_cache: bool = False,
                 logits_to_keep: Union[int, torch.Tensor] = 0,
@@ -155,13 +156,16 @@ class MiniMindVLM(MiniMindForCausalLM):
 
         hidden_states = self.model.norm(hidden_states)
 
-        aux_loss = sum(
-            layer.mlp.aux_loss
-            for layer in self.model.layers
-            if isinstance(layer.mlp, MOEFeedForward)
-        )
+        aux_loss = sum([l.mlp.aux_loss for l in self.model.layers if isinstance(l.mlp, MOEFeedForward)], hidden_states.new_zeros(1).squeeze())
         slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
         logits = self.lm_head(hidden_states[:, slice_indices, :])
-        output = CausalLMOutputWithPast(logits=logits, past_key_values=presents, hidden_states=hidden_states)
+
+        loss = None
+        if labels is not None:
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1), ignore_index=-100)
+
+        output = CausalLMOutputWithPast(loss=loss, logits=logits, past_key_values=presents, hidden_states=hidden_states)
         output.aux_loss = aux_loss
         return output

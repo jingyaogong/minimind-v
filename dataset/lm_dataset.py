@@ -23,13 +23,13 @@ class VLMDataset(Dataset):
         self.max_length = max_length
         self.preprocess = preprocess
         self.image_token = image_special_token
-        self.bos_id = tokenizer('<|im_start|>assistant', add_special_tokens=False).input_ids
-        self.eos_id = tokenizer('<|im_end|>', add_special_tokens=False).input_ids
+        self.bos_id = tokenizer(f'{tokenizer.bos_token}assistant\n', add_special_tokens=False).input_ids
+        self.eos_id = tokenizer(f'{tokenizer.eos_token}\n', add_special_tokens=False).input_ids
 
     def __len__(self):
         return len(self.table)
 
-    def _create_chat_prompt(self, conversations):
+    def create_chat_prompt(self, conversations):
         messages = []
         for i, turn in enumerate(conversations):
             role = 'user' if i % 2 == 0 else 'assistant'
@@ -40,8 +40,8 @@ class VLMDataset(Dataset):
             add_generation_prompt=False
         )
 
-    def _generate_loss_mask(self, input_ids):
-        loss_mask = [0] * len(input_ids)
+    def generate_labels(self, input_ids):
+        labels = [-100] * len(input_ids)
         i = 0
         while i < len(input_ids):
             if input_ids[i:i + len(self.bos_id)] == self.bos_id:
@@ -51,30 +51,31 @@ class VLMDataset(Dataset):
                     if input_ids[end:end + len(self.eos_id)] == self.eos_id:
                         break
                     end += 1
-                for j in range(start + 1, min(end + len(self.eos_id) + 1, self.max_length)):
-                    loss_mask[j] = 1
+                for j in range(start, min(end + len(self.eos_id), self.max_length)):
+                    labels[j] = input_ids[j]
                 i = end + len(self.eos_id) if end < len(input_ids) else len(input_ids)
             else:
                 i += 1
-        return loss_mask
+        return labels
 
     def __getitem__(self, index: int):
         conversations = json.loads(self.table['conversations'][index].as_py())
         image_bytes = self.table['image_bytes'][index].as_py()
         
-        prompt = self._create_chat_prompt(conversations)
+        prompt = self.create_chat_prompt(conversations)
         input_ids = self.tokenizer(prompt).input_ids[:self.max_length]
         input_ids += [self.tokenizer.pad_token_id] * (self.max_length - len(input_ids))
-        loss_mask = self._generate_loss_mask(input_ids)
-
-        X = torch.tensor(input_ids[:-1], dtype=torch.long)
-        Y = torch.tensor(input_ids[1:], dtype=torch.long)
-        loss_mask = torch.tensor(loss_mask[1:], dtype=torch.long)
+        labels = self.generate_labels(input_ids)
 
         image = Image.open(io.BytesIO(image_bytes))
         image_tensor = MiniMindVLM.image2tensor(image, self.preprocess).unsqueeze(0)
+        # # === 调试打印 ===
+        # print(f"\n--- Sample {index} ---")
+        # for i, (x, y) in enumerate(zip(input_ids[:-1], labels[1:])):
+        #     print(f"{i:3d}: X={self.tokenizer.decode([x])!r:16s} ---> Y={self.tokenizer.decode([input_ids[i+1]])!r:16s} label={y}")
+        # # ================
 
-        return X, Y, loss_mask, image_tensor
+        return torch.tensor(input_ids, dtype=torch.long), torch.tensor(labels, dtype=torch.long), image_tensor
 
 # 测试parquet数据读取和可视化
 if __name__ == '__main__':
