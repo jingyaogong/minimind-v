@@ -220,12 +220,12 @@ and place it under `./dataset`.
 
 Pretrain data:
 ```bash
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_data.parquet
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_i2t.parquet
 ```
 
 SFT data:
 ```bash
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_data.parquet
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_i2t.parquet
 ```
 
 Please reserve about ~2GB of space for the dataset. If there is insufficient space for pretrain data, you can try skipping the pretrain training step and proceed directly to SFT training.
