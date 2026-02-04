@@ -1,12 +1,11 @@
 import os
-
 import torch
 import warnings
 from .model_minimind import *
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
 from torch import nn
 from transformers import CLIPProcessor, CLIPModel
-from typing import List
+from transformers.modeling_outputs import MoeCausalLMOutputWithPast
 
 warnings.filterwarnings('ignore')
 
@@ -113,10 +112,10 @@ class MiniMindVLM(MiniMindForCausalLM):
     def forward(self,
                 input_ids: Optional[torch.Tensor] = None,
                 attention_mask: Optional[torch.Tensor] = None,
-                labels: Optional[torch.Tensor] = None,
                 past_key_values: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
                 use_cache: bool = False,
                 logits_to_keep: Union[int, torch.Tensor] = 0,
+                labels: Optional[torch.Tensor] = None,
                 pixel_values: Optional[torch.FloatTensor] = None,
                 **args):
         batch_size, seq_length = input_ids.shape
@@ -166,6 +165,5 @@ class MiniMindVLM(MiniMindForCausalLM):
             shift_labels = labels[..., 1:].contiguous()
             loss = F.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1), ignore_index=-100)
 
-        output = CausalLMOutputWithPast(loss=loss, logits=logits, past_key_values=presents, hidden_states=hidden_states)
-        output.aux_loss = aux_loss
+        output = MoeCausalLMOutputWithPast(loss=loss, aux_loss=aux_loss, logits=logits, past_key_values=presents, hidden_states=hidden_states)
         return output
