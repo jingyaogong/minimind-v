@@ -61,14 +61,14 @@ class VLMDataset(Dataset):
     def __getitem__(self, index: int):
         conversations = json.loads(self.table['conversations'][index].as_py())
         image_bytes = self.table['image_bytes'][index].as_py()
+        if not isinstance(image_bytes, list): image_bytes = [image_bytes]
         
         prompt = self.create_chat_prompt(conversations)
         input_ids = self.tokenizer(prompt).input_ids[:self.max_length]
         input_ids += [self.tokenizer.pad_token_id] * (self.max_length - len(input_ids))
         labels = self.generate_labels(input_ids)
 
-        image = Image.open(io.BytesIO(image_bytes))
-        image_tensor = MiniMindVLM.image2tensor(image, self.preprocess).unsqueeze(0)
+        image_tensor = torch.stack([MiniMindVLM.image2tensor(Image.open(io.BytesIO(img)), self.preprocess) for img in image_bytes])
         # # === 调试打印 ===
         # print(f"\n--- Sample {index} ---")
         # for i, (x, y) in enumerate(zip(input_ids[:-1], labels[1:])):
@@ -80,7 +80,7 @@ class VLMDataset(Dataset):
 # 测试parquet数据读取和可视化
 if __name__ == '__main__':
     import matplotlib.pyplot as plt; plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei']
-    for path in ['pretrain_data.parquet', 'sft_data.parquet']:
+    for path in ['pretrain_i2t.parquet', 'sft_i2t.parquet']:
         t = pq.read_table(path); fig, ax = plt.subplots(1, 5, figsize=(20, 4))
         for i in range(5):
             ax[i].imshow(Image.open(io.BytesIO(t['image_bytes'][i].as_py()))); ax[i].axis('off')
