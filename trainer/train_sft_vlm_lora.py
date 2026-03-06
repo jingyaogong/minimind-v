@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 from transformers import AutoTokenizer
 from model.model_vlm import MiniMindVLM, VLMConfig
 from dataset.lm_dataset import VLMDataset
-from trainer.trainer_utils import get_lr, Logger, is_main_process, init_distributed_mode, setup_seed, init_vlm_model, vlm_checkpoint, SkipBatchSampler
+from trainer.trainer_utils import get_lr, Logger, is_main_process, init_distributed_mode, setup_seed, init_vlm_model
 from trainer.lora_utils import get_lora_config, apply_lora
 
 warnings.filterwarnings('ignore')
@@ -54,7 +54,7 @@ def train_epoch(epoch, loader, iters, start_step=0, wandb=None):
 
         if step % args.log_interval == 0 or step == iters - 1:
             spend_time = time.time() - start_time
-            logger.log(
+            Logger(
                 'Epoch:[{}/{}]({}/{}) loss:{:.3f} lr:{:.8f} epoch_time:{}min:'.format(
                     epoch + 1,
                     args.epochs,
@@ -72,11 +72,19 @@ def train_epoch(epoch, loader, iters, start_step=0, wandb=None):
 
         if step % args.save_interval == 0 or step == iters - 1:
             if is_main_process():
-                vlm_checkpoint(model.module if hasattr(model, 'module') else model,
-                             epoch,
-                             step,
-                             args,
-                             suffix=f"_lora" if args.use_lora else "")
+                model.eval()
+                raw_model = model.module if hasattr(model, 'module') else model
+                raw_model = getattr(raw_model, '_orig_mod', raw_model)
+                os.makedirs(args.out_dir, exist_ok=True)
+                lora_suffix = '_lora' if args.use_lora else ''
+                ckp = f'{args.out_dir}/sft_vlm{lora_suffix}_{lm_config.hidden_size}.pth'
+                if args.use_lora:
+                    raw_model.save_pretrained(ckp + '_adapters')
+                else:
+                    state_dict = {k: v.half().cpu() for k, v in raw_model.state_dict().items()
+                                  if not k.startswith('vision_encoder.')}
+                    torch.save(state_dict, ckp)
+                model.train()
 
 
 if __name__ == "__main__":
@@ -95,11 +103,14 @@ if __name__ == "__main__":
     parser.add_argument("--log_interval", type=int, default=100, help="Log interval")
     parser.add_argument("--save_interval", type=int, default=1000, help="Save interval")
     parser.add_argument("--local_rank", type=int, default=-1, help="DDP local rank")
+    parser.add_argument("--ddp", action="store_true", help="Use DistributedDataParallel")
+    parser.add_argument("--data_path", type=str, default="./dataset/sft_vlm.parquet", help="Path to training parquet file")
     parser.add_argument("--use_moe", action="store_true", help="Use Mixture of Experts")
     parser.add_argument("--resume_step", type=int, default=0, help="Resume from step")
     parser.add_argument("--hidden_size", type=int, default=512, help="Hidden size")
     parser.add_argument("--num_heads", type=int, default=16, help="Number of attention heads")
     parser.add_argument("--num_layers", type=int, default=8, help="Number of layers")
+    parser.add_argument("--num_kv_heads", type=int, default=4, help="Number of key-value heads (GQA)")
 
     # LoRA-specific arguments
     parser.add_argument("--use_lora", action="store_true", help="Use LoRA for parameter-efficient training")
@@ -110,9 +121,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Setup
-    init_distributed_mode(args)
+    init_distributed_mode()
     setup_seed(42)
-    logger = Logger(args.out_dir, is_main_process())
 
     # Load tokenizer and model
     tokenizer = AutoTokenizer.from_pretrained('./model')
@@ -121,12 +131,13 @@ if __name__ == "__main__":
     lm_config = VLMConfig(
         hidden_size=args.hidden_size,
         num_attention_heads=args.num_heads,
+        num_key_value_heads=args.num_kv_heads,
         num_hidden_layers=args.num_layers,
         use_moe=args.use_moe,
     )
 
     # Initialize model
-    model = init_vlm_model(lm_config, args.device)
+    model, tokenizer, _ = init_vlm_model(lm_config, device=args.device, tokenizer_path='./model', vision_model_path='./model/vision_model/clip-vit-base-patch16', save_dir='./out')
 
     # Apply LoRA if requested
     if args.use_lora:
@@ -165,7 +176,7 @@ if __name__ == "__main__":
 
     # Load dataset
     dataset = VLMDataset(
-        parquet_path='./dataset/sft_vlm.parquet',
+        parquet_path=args.data_path,
         tokenizer=tokenizer,
         preprocess=model.processor if not args.ddp else model.module.processor,
         max_length=512
@@ -203,8 +214,8 @@ if __name__ == "__main__":
 
     # Training loop
     iters = len(loader)
-    logger.log(f"Starting SFT training {'with LoRA' if args.use_lora else 'full fine-tuning'}...")
-    logger.log(f"Total iterations: {iters} per epoch")
+    Logger(f"Starting SFT training {'with LoRA' if args.use_lora else 'full fine-tuning'}...")
+    Logger(f"Total iterations: {iters} per epoch")
 
     for epoch in range(args.epochs):
         train_epoch(epoch, loader, iters, start_step=0, wandb=wandb)
@@ -216,7 +227,7 @@ if __name__ == "__main__":
             save_path = f"{args.out_dir}/lora_adapters_sft_vlm_{args.hidden_size}"
             model_to_save = model.module if hasattr(model, 'module') else model
             model_to_save.save_pretrained(save_path)
-            logger.log(f"✅ LoRA adapters saved to {save_path}")
+            Logger(f"✅ LoRA adapters saved to {save_path}")
         else:
             vlm_checkpoint(
                 model.module if hasattr(model, 'module') else model,
@@ -229,4 +240,4 @@ if __name__ == "__main__":
     if wandb:
         wandb.finish()
 
-    logger.log("Training complete!")
+    Logger("Training complete!")

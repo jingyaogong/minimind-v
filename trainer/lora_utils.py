@@ -37,9 +37,10 @@ def get_lora_config(
     # These are the attention projection layers
     if target_modules is None:
         target_modules = [
-            "c_attn",    # Combined QKV projection in attention
-            "c_proj",    # Output projection in attention
-            "c_fc",      # First linear in MLP (optional, but helps)
+            "q_proj",    # Query projection in attention
+            "k_proj",    # Key projection in attention
+            "v_proj",    # Value projection in attention
+            "o_proj",    # Output projection in attention
         ]
 
     config = LoraConfig(
