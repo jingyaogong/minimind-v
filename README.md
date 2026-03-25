@@ -33,8 +33,8 @@
 
 </div>
 
-* 此项目旨在从0开始，仅用1.3块钱成本 + 1小时！即可训练出26M参数的超小多模态视觉语言模型**MiniMind-V**。
-* **MiniMind-V**最小版本体积仅为 GPT3 的约 $\frac{1}{7000}$，力求做到个人GPU也可快速推理甚至训练。
+* 此项目旨在从0开始，仅用1.3块钱成本 + 1小时！即可训练出67M参数的超小多模态视觉语言模型**MiniMind-V**。
+* **MiniMind-V**最小版本体积仅为 GPT3 的约 $\frac{1}{2600}$，力求做到个人GPU也可快速推理甚至训练。
 * **MiniMind-V**是[MiniMind](https://github.com/jingyaogong/minimind)纯语言模型的视觉能力额外拓展。
 * 项目同时包含了VLM大模型的极简结构、数据集清洗、预训练(Pretrain)、监督微调(SFT)等全过程代码。
 * 这不仅是一个开源VLM模型的最小实现，也是入门视觉语言模型的简明教程。
@@ -46,31 +46,46 @@
 
 <div align="center">
 
-![minimind2-v](./images/minimind2-v.gif)
+![minimind2-v](./images/minimind-3v.gif)
 
 [🔗🤖在线体验](https://www.modelscope.cn/studios/gongjy/MiniMind-V) | [🔗🎞️视频介绍](https://www.bilibili.com/video/BV1Sh1vYBEzY)
 
 </div>
 
-# 📌 Introduction
+# 📌 项目介绍
 
 “用乐高拼出一架飞机，远比坐在头等舱里飞行更让人兴奋！”
 构建VLM范式的多模态大模型是否真的如想象中那样复杂？它的代码实现到底如何？
 训练过程究竟难不难？那么现在，探索它们的答案，一起感受创造的乐趣吧！
 
 > [!TIP]
-> （截至2025-02-20）MiniMind-V 系列已完成了以下型号模型训练，最小仅需26M (0.026B)，即可具备识图和对话的能力！
+> （截至2026-02-15）MiniMind-V 系列已完成了以下型号模型训练，最小仅需67M (0.067B)，即可具备识图和对话的能力！
 
 | 模型 (大小)                   | 推理占用   | release    | 
 |---------------------------|--------|------------|
-| MiniMind2-V (104M)        | 0.6 GB | 2025.02.20 |
-| MiniMind2-Small-V (26M)   | 1.1 GB | 2025.02.20 |
+| minimind-3v-moe (201M-A67M) | 1.0 GB | 2026.04.01 |
+| minimind-3v (67M)         | 0.5 GB | 2026.04.01 |
+| MiniMind2-V (104M)        | 1.1 GB | 2025.02.20 |
+| MiniMind2-Small-V (26M)   | 0.6 GB | 2025.02.20 |
 | minimind-v-v1-small (27M) | 0.6 GB | 2024.10.04 |
 | minimind-v-v1 (109M)      | 1.1 GB | 2024.10.04 |
 
-### 👉**最近更新**
+#### 👉 更新日志
 
-<details close> 
+<details> 
+<summary> <b>2026-04-01</b> </summary>
+
+- 新增 minimind-3v (67M) 和 minimind-3v-moe (201M-A67M) 模型
+- 统一使用768+8架构，支持dense和moe两种模式
+- 视觉编码器从CLIP切换为SigLIP2（siglip2-base-p16-ve）
+- 投影模块从QFormer改为MLP Projection + reshape压缩
+- 数据集格式更新为parquet，混合数据源、更新tokenizer，图像占位符改为`<|image_pad|>`、新增WebUI：支持动态扫描模型目录、下拉菜单切换模型
+- 模型代码重构，LLM/VLM统一适配Transformers格式
+- 训练脚本支持DDP多卡、bfloat16混合精度、torch.compile加速
+
+</details>
+
+<details> 
 <summary> <b>2025-10-24</b> </summary>
 
 - bug修复：模型权重不对应
@@ -80,7 +95,7 @@
 
 </details>
 
-<details close> 
+<details> 
 <summary> <b>2025-04-27</b> </summary>
 
 - 兼容性更新
@@ -89,20 +104,17 @@
 
 </details>
 
-<details close> 
-<summary> <b>2025-02-20</b> </summary>
+<details>
+
+<summary> <b>More...</b> </summary>
+
+**2025-02-20**
 
 - MiniMind2-V伴随MiniMind2同步更新
 - 大幅减少所有冗余代码，规范代码格式
 - 大幅精简模型冗余结构
 - 更新数据集格式，拓展新的SFT数据集
 - 比前代VLM更优秀的效果！
-
-</details>
-
-<details close>
-
-<summary> <b>More...</b> </summary>
 
 **2024-10-05**
 
@@ -112,7 +124,7 @@
 
 # 📌 快速开始
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>分享本人的软硬件配置（仅供参考）</summary>
 
 * CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
@@ -129,63 +141,64 @@
 
 ```bash
 # 克隆代码仓库
-git clone https://github.com/jingyaogong/minimind-v
+git clone --depth 1 https://github.com/jingyaogong/minimind-v
 ```
 
 ```bash
-# 下载clip模型到 ./model/vision_model 目录下
-git clone https://huggingface.co/openai/clip-vit-base-patch16
-# or
-git clone https://www.modelscope.cn/models/openai-mirror/clip-vit-base-patch16
+# 下载siglip2模型到 ./model 目录下
+git clone https://huggingface.co/jingyaogong/siglip2-base-p16-ve
+# 或
+git clone https://modelscope.cn/models/gongjy/siglip2-base-p16-ve
 ```
 
 ```bash
 # 下载minimind语言模型权重到 ./out 目录下（作为训练VLM的基座语言模型）
 # HuggingFace
-https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_512.pth # or llm_768.pth
+https://huggingface.co/jingyaogong/minimind-3v-pytorch/blob/main/llm_768.pth
 # 国内源
-https://modelscope.cn/models/gongjy/MiniMind2-V-PyTorch/resolve/master/llm_512.pth # or llm_768.pth
+https://modelscope.cn/models/gongjy/minimind-3v-pytorch/resolve/master/llm_768.pth
 ```
 
 ## Ⅰ 测试已有模型效果
 
-### 1.环境准备
+### 1' 环境准备
 
 ```bash
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-### 2.下载模型
+### 2' 下载模型
 
 ```bash
-git clone https://huggingface.co/jingyaogong/MiniMind2-V
+git clone https://huggingface.co/jingyaogong/minimind-3v
 ```
 
-### 3.命令行问答
+### 3' 命令行问答
 
 ```bash
 # load_from='model': 加载原生PyTorch权重, load_from='其他路径': 加载transformers格式
 python eval_vlm.py --load_from model --weight sft_vlm
 
 # 或使用transformers格式模型
-python eval_vlm.py --load_from MiniMind2-V
+python eval_vlm.py --load_from minimind-3v
 ```
 
-### 4.或启动WebUI
+### 4' 启动WebUI（可选）
 
 ```bash
-python web_demo_vlm.py
+# ⚠️ 须先将 transformers 格式模型文件夹复制到 ./scripts/ 目录下（例如：cp -r minimind-3v ./scripts/minimind-3v），web_demo_vlm 脚本会自动扫描该目录下包含权重文件的子文件夹，如不存在则报错
+cd scripts && python web_demo_vlm.py
 ```
 
 ## Ⅱ 从0开始自己训练
 
-### 1.环境准备
+### 1' 环境准备
 
 ```bash
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>注：提前测试Torch是否可用cuda</summary>
 
 ```bash
@@ -198,12 +211,12 @@ print(torch.cuda.is_available())
 
 </details>
 
-### 2.数据下载
+### 2' 数据下载
 
 从下文提供的[数据集链接](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)
 下载所需内容并放到`./dataset`下。
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>注：数据集须知</summary>
 
 【注1】之前需解压50万零碎的图像文件可能非常慢。2025-12-27起，数据集格式统一为Parquet，图文一体化存储，体积更小，无需解压，加载更快。
@@ -224,7 +237,7 @@ wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/
 
 </details>
 
-### 3.开始训练
+### 3' 开始训练
 
 **3.1 预训练（学图像描述）**
 
@@ -233,7 +246,7 @@ wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/
 python train_pretrain_vlm.py --epochs 4 --from_weight llm
 ```
 
-> 执行预训练，得到 `pretrain_vlm_*.pth` 作为预训练的输出权重（其中*为模型的dimension，默认为512）
+> 执行预训练，得到 `pretrain_vlm_*.pth` 作为预训练的输出权重（其中*为模型的dimension，默认为768）
 
 
 **3.2 监督微调（学看图对话方式）**
@@ -245,7 +258,7 @@ python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 
 > 执行监督微调，得到 `sft_vlm_*.pth` 作为指令微调的输出权重
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>注：训练须知</summary>
 
 **训练特性：**
@@ -271,10 +284,10 @@ python train_sft_vlm.py --epochs 4 --from_resume 1
 
 ---
 
-### 4.测试模型效果
+### 4' 测试模型效果
 
 确保需要测试的模型`*.pth`文件位于`./out/`目录下。
-也可以直接去[此处](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch)下载使用我训练的`*.pth`文件。
+也可以直接去[此处](https://huggingface.co/jingyaogong/minimind-3v-pytorch)下载使用我训练的`*.pth`文件。
 
 ```bash
 # 测试SFT模型（默认）
@@ -295,7 +308,7 @@ python eval_vlm.py --weight pretrain_vlm
 torchrun --nproc_per_node N train_xxx.py
 ```
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>注：其它须知</summary>
 
 <del>
@@ -322,7 +335,7 @@ python train_xxx.py --use_wandb
 
 </details>
 
-# 📌 VLM Detail
+# 📌 模型细节
 
 MiniMind-V (VLM)的基座语言模型MiniMind (LLM)来自孪生项目[minimind](https://github.com/jingyaogong/minimind)，
 具体的模型结构、训练细节、原理、测试效果等均可移步[minimind](https://github.com/jingyaogong/minimind)项目查阅。
@@ -332,8 +345,8 @@ MiniMind-V (VLM)的基座语言模型MiniMind (LLM)来自孪生项目[minimind](
 > 这并不受到影响，仓库致力于最低成本的开箱即用！
 
 MiniMind-V的结构仅增加Visual Encoder和特征投影两个子模块，增加模态混合分支，以支持多种模态信息的输入：
-![LLM-structure](./images/VLM-structure.png)
-![LLM-structure](./images/VLM-structure-moe.png)
+![LLM-structure](./images/VLM-structure.jpg)
+![LLM-structure](./images/VLM-structure-moe.jpg)
 
 
 <details>
@@ -378,21 +391,22 @@ GPT模型根据现有token预测输出下一个下下一个下下下一个token 
 2. 训练微调LLM，使其和 **"外语词典"** 度过磨合期，从而更好的理解图片
 
 "外语词典" 称之为Visual Encoder模型。
-和LlaVA、Qwen-VL等视觉语言模型类似，MiniMind-V同样选用开源Clip系列模型作为Visual Encoder。
-具体使用[clip-vit-base-patch16](https://huggingface.co/openai/clip-vit-base-patch16)，
-一种基于 ViT-B/16 架构的经典Visual Encoder用于描述图像文本信息。
-输入的图像尺寸为224x224，因为划分的Patch是16×16，所以会产生14*14=196个token作为encoder编码层的输入，
+和LlaVA、Qwen-VL等视觉语言模型类似，MiniMind-V当前选用开源SigLIP2系列模型作为Visual Encoder。
+具体使用[siglip2-base-p16-ve](https://huggingface.co/jingyaogong/siglip2-base-p16-ve)，
+一种基于 ViT-B/16 架构的Visual Encoder用于描述图像文本信息。
+当前使用的 SigLIP2 NaFlex 视觉编码器会根据预处理结果生成最多256个patch token作为encoder编码层的输入，
 最终产生1×768维的嵌入向量用于和文本对计算误差。
 我们并不需要最终嵌入表示，因此只取encoder层的输出，也就是VIT核心主干的输出特征即可。
-它拿到前一层维度196×768大小的特征，我们把它作为196个visual token输入MiniMind-V。
-与LLM的结合在获取图像encoder特征后，一方面需要把768维度的visual token对齐到LLM的文本token，
+它拿到前一层256×768大小的特征，通过reshape将每4个相邻token拼接为1个（256×768 → 64×3072），再经过2层MLP（Linear→GELU→Linear）投影到LLM的隐藏维度，最终作为64个visual token输入MiniMind-V。
+与LLM的结合在获取图像encoder特征后，一方面需要把视觉特征对齐到LLM的文本token维度，
 另一方面，要将图像特征映射到与文本embedding相同的空间，即文本token和原生的视觉token需要磨合并不能直接地一视同仁，
 可以称之为跨模态的特征对齐。
-[LlaVA-1](https://arxiv.org/pdf/2304.08485)使用简单的无偏线性变换完成了这一操作，效果很不错，MiniMind-V同样如此。
+
+[LlaVA-1](https://arxiv.org/pdf/2304.08485)使用简单的线性变换完成对齐，[LlaVA-1.5](https://arxiv.org/pdf/2310.03744)升级为2层MLP，MiniMind-V采用与LlaVA-1.5相同的MLP Projection方案，并结合reshape进行token压缩。
 
 ![llava-structure](./images/llava-structure.png)
 
-至此，MiniMind-V的内部结构变化已经呈现完毕。
+MiniMind-V的主要结构已介绍完毕。
 
 </details>
 
@@ -409,110 +423,94 @@ VLM的输入依然是一段文本，其中包含特殊的`<image>`占位符。
 <image>\n这个图像中有什么内容？
 ```
 
-在`minimind-v`中，使用196个字符组成的 `@@@...@@@`
-占位符代替图像，之所以是196个字符，前面有所提及：
-任何图像都被clip模型encoder为196×768维的token，
-因此`minimind-v`的prompt为：
+在`minimind-v`中，使用64个`<|image_pad|>`组成的占位符代替图像（SigLIP2输出的256个patch特征经reshape+MLP压缩为64个token），因此`minimind-v`的prompt为：
 
 ```text
-@@@......@@@\n这个图片描述的是什么内容？
+<|image_pad|><|image_pad|>...<|image_pad|>(×64)\n这个图片描述的是什么内容？
 ```
 
-计算完embedding和projection，并对图像部分token替换后整个计算过程到输出则和LLM部分没有任何区别。
+计算完embedding和projection，用视觉特征替换掉对应占位符的embedding后，整个计算过程到输出则和LLM部分没有差异。
 
-![input](./images/minimind-v-input.png)
+![input](./images/minimind-v-input.jpg)
 
-至此，`MiniMind-V`的所有细节已经呈现完毕。
-`MiniMind-V`的模型子类完全继承自`MiniMind`，
-仅基于后者做**最小**变更而产生，
-其核心算法改动`< 50行`，迁移难度极低。
-因此可能和`LlAVA`等模型细节可能存在区别，但思路完全统一。
+至此，`MiniMind-V`的所有细节呈现完毕，VLM模型子类继承自`MiniMind`，仅做**最小**变更而产生，核心算法改动`< 50行`，迁移难度极低，和`LlaVA`等模型具体实现存在区别，但思路一致。
 
-# 📌 Experiment
+# 📌 实验
 
 ## Ⅰ 数据集
 
-来源：[Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions)
-包含约57万张预训练图像，来自CC-3M和COCO 2014；
-[llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k)
-包含300k条指令微调数据和15万张图像。
-问答内容经过翻译，
-对中文支持更友好，进一步经过整理并`resize`。
+原始来源：
+- [Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions)：包含约57万张预训练图像，来自CC-3M和COCO 2014
+- [llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k)：包含300k条指令微调数据和15万张图像
+- [LLaVA-SFT-665K](https://huggingface.co/datasets/csuhan/LLaVA-SFT-665K)：包含665k条指令微调数据
 
-(pretrain_vlm_data.jsonl) 预训练数据集格式：
+其中部分为中文数据，部分为英文数据。问答内容经过翻译，对中文支持更友好，进一步经过整理并`resize`（pretrain分辨率128×128，sft分辨率160×160）。
 
-```json lines
-{
-  "conversations": [
-    {
-      "role": "user",
-      "content": "提供给定图像的简要描述。\n<image>"
-    },
-    {
-      "role": "assistant",
-      "content": "橄榄油是自由使用的健康成分。"
-    }
-  ],
-  "image": "GCC_train_002582585.jpg"
-}
+(pretrain_i2t.parquet) 预训练数据集格式：
+
+```text
+列名: conversations (json string), image_bytes (binary), image_names (string)
+
+conversations 示例:
+[
+  {"role": "user", "content": "提供给定图像的简要描述。\n<image>"},
+  {"role": "assistant", "content": "橄榄油是自由使用的健康成分。"}
+]
+image_bytes: <图像二进制数据>
 ```
 
-(sft_vlm_data.jsonl) 单图指令微调数据集格式：
+(sft_i2t.parquet) 单图指令微调数据集格式：
 
-```json lines
-{
-  "conversations": [
-    {
-      "role": "user",
-      "content": "闹钟的位置对睡眠质量有什么影响？<image>"
-    },
-    {
-      "role": "assistant",
-      "content": "把数字闹钟放在床头柜..."
-    }
-  ],
-  "image": "train-00000-of-00001_image_0_0.jpg"
-}
+```text
+列名: conversations (json string), image_bytes (binary), image_names (string)
+
+conversations 示例:
+[
+  {"role": "user", "content": "闹钟的位置对睡眠质量有什么影响？<image>"},
+  {"role": "assistant", "content": "把数字闹钟放在床头柜..."}
+]
+image_bytes: <图像二进制数据>
 ```
 
+> 注：sft_i2t.parquet 共约 58 万条数据，其中约 23.6 万条为含图对话（i2t），约 34.6 万条为纯文本对话（t2t），后者用于保持模型的基础语言能力。
 
 数据集下载地址：([ModelScope](https://www.modelscope.cn/datasets/gongjy/minimind-v_dataset) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))
 
 ## Ⅱ 训练
 
+训练分为两个阶段，均冻结Visual Encoder梯度，仅训练Projection和LLM部分。
+训练基于LLM预训练权重初始化，支持DDP多卡训练、混合精度（bfloat16）、torch.compile加速和swanlab日志记录。
+
 > train_pretrain_vlm
 
-预训练从595K条数据集中学习图片的通用知识，比如鹿是鹿，狗是狗。
+预训练阶段从约113万条图文描述数据中学习图片的通用知识（如鹿是鹿，狗是狗）。
+此阶段采用较高学习率（1e-4），最大序列长度360，冻结LLM主体参数，仅设置Projection和LLM的第0层可学习，
+目的是让模型快速建立视觉特征到语言空间的基础映射，同时避免破坏LLM已有的语言能力。
 
 > train_sft_vlm
 
-指令微调从300K条真实对话数据集中学习对图片提问的真实问答格式，更符合与人类的交流习惯。
-
-训练时均冻结visual encoder也就是clip模型梯度，
-只训练Projection和LLM两部分。
-预训练中，只设置Projection和LLM的最后一层参数可学习。
-指令微调中，设置Projection和LLM的全部参数可学习。
+指令微调阶段从约58万条数据中学习真实问答格式，其中约23.6万条为图文多轮对话，约34.6万条为纯文本对话（用于保持LLM基础能力）。
+此阶段采用较低学习率（1e-5~1e-6），最大序列长度768，解冻Projection和LLM全部参数进行全量微调，
+使模型学会根据图片内容进行多轮对话，并通过混入的纯文本数据缓解灾难性遗忘。
 
 > 训练时间和Loss走势（仅供参考）
 
-Pretrain [512+8] & [768+16]
-![input](./images/pretrain_loss.png)
+Pretrain [768+8] (dense & moe)
+![input](./images/pretrain_loss.jpg)
 
-SFT [512+8] & [768+16]
-![input](./images/sft_loss.png)
+SFT [768+8] (dense & moe)
+![input](./images/sft_loss.jpg)
 
 ## Ⅲ 模型权重
 
-(原生PyTorch`*.pth`权重文件) 下载地址：
-([ModelScope](https://www.modelscope.cn/models/gongjy/MiniMind2-V-PyTorch) | [HuggingFace](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch))
-
-(`Transformers`格式模型)
-下载地址：
-([ModelScope](https://www.modelscope.cn/profile/gongjy) | [HuggingFace](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d))
+| 模型格式 | ModelScope | HuggingFace |
+|---|---|---|
+| 原生PyTorch (`*.pth`) | [minimind-3v-pytorch](https://www.modelscope.cn/models/gongjy/minimind-3v-pytorch) | [minimind-3v-pytorch](https://huggingface.co/jingyaogong/minimind-3v-pytorch) |
+| Transformers 格式 | [minimind-v collection](https://modelscope.cn/collections/MiniMind-V-42b841dde22d41) | [minimind-v collection](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d) |
 
 > 注：Transformers版本均为单图指令微调后的`MiniMind-V`模型
 
-# 📌 Test
+# 📌 评估
 
 ### 效果测试
 
@@ -521,113 +519,128 @@ SFT [512+8] & [768+16]
 <table>
   <thead>
     <tr>
-      <th>图片</th>
-      <th>MiniMind2-V</th>
-      <th>MiniMind2-V-Small</th>
+      <th>image</th>
+      <th>minimind-3v</th>
+      <th>minimind-3v-moe</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>
-        <img src="./dataset/eval_images/城市车水马龙-city-traffic.jpg" alt="city-traffic">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/airplane-flying-blue-sky.jpg" alt="airplane">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>图中是一个繁忙的城市街道，一条长长的街道两旁都是高楼大厦。这条街上挤满了汽车、卡车和公共汽车，还有许多其他车辆在路上行驶。在街道上，可以看到许多汽车，有的在高速行驶，而其他的则停在街道一侧。此外还有一辆公交车也停在街道的右侧。街道上可以看到交通灯，表明这是一个繁忙的城市环境。</td>
-      <td>图中是一个繁忙的城市景象，有几辆汽车和一辆卡车行驶在城市街道上。可以看到许多交通信号灯，其中一些位于街道左侧，另一些则在右侧。可以看到有几个人在街上行走，其中一些人站得离街道更近一些，而另一些则距离较远。还有一个停车标志位于画面的左侧，暗示着城市环境。可以看到街道上有两辆汽车，一辆在右边，另一辆在左边，还有一辆在左边。这幅图像捕捉到了都市环境中典型的一天。</td>
+      <td>在这幅图片中，一架白色的飞机正降落在一片广阔的天空中。天空中飘浮着许多流线型的建筑物，这些建筑物散落在天空中。除了主要的飞机外，还有两辆汽车在场景中各处停放，包括一辆巴士和一辆小型汽车。这架飞机似乎停在地面上，表明它们正在进行商业活动。</td>
+      <td>在这张照片中，有一架大型的飞机正在降落，这表明它是为这架飞机而设计的。此外，它停在云层之下，这表明它在移动。天空中有云朵，暗示着这架飞机正在空中飞行。整个场景的背景显示出一种宁静祥和的气氛，暗示这架飞机正在飞行中作为一个机会来进行外交活动或与其他客机接触。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/太空宇航员-Astronaut-Space.jpg" alt="astronaut">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/birthday-cake-candles-table.jpg" alt="birthday-cake">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>图片显示了一个宇航员的宇航员身穿宇航服，坐在一架大型航天飞机上。他们似乎正在进行一次宇航员登机或下机的旅程。在宇航员的身后，有一个火箭发射架，可能是用来支撑宇航员在旅程中的任务。此外，还有一架飞机停在机库附近，进一步表明这是一次航空展。在飞机的周围，还有一些人，但他们看起来离飞机很近。可以看到一个人站在飞机附近，可能正在观察或等待航天飞机准备起飞。</td>
-      <td>场景中，一名士兵戴着头盔站在一架大型飞机上。这架飞机似乎是一架军用军用飞机，似乎正准备登上一架飞机。另一个人则站在前面，可能正在观察飞行过程。在飞机周围，有几个人，其中一些站在左侧，另一些则站在右侧。他们似乎正在观看飞行员的表现。此外，还有一辆卡车停在靠近左侧的位置，可能是为了更具体地观察飞行过程。</td>
+      <td>图片显示了一张大生日蛋糕，上面刻有各种生日和装饰物的生日和一束蜡烛。这些甜蜜而独特的气味使其成为这个特殊场合的焦点。蛋糕被放在餐桌上，有蛋糕放在上面，很可能是放在桌上，用蜡烛加上蜡烛来营造出诱人的场景。此外，这张生日蛋糕还配上了蜡烛作为装饰物，进一步丰富了整个生日的氛围。</td>
+      <td>这张照片捕捉到了一个生日聚会，各种美味可口的生日蛋糕和一把勺子放在那里。它被放置在一个充满生气的蛋糕盒子里，里面装着各种各样的草莓糖霜糖浆。蛋糕上有一个大号的蜡烛，给人一种温馨和诱人的图案。周围有很多小点心，比如小心地蜡烛和糖霜，让整个蛋糕看起来更加令人放松和诱人。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/小狗美女海边-Dog-Woman-Sea.jpg" alt="dog-woman-sea">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/pizza-on-wooden-board.jpg" alt="pizza">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>图片中，一个女人坐在沙滩上，手里拿着一只白色的狗。她看起来像是个女人，坐在沙地上，看着她。一只狗也坐在她旁边，看起来很放松和舒适。海滩上散布着其他沙滩游客，有些人坐着，而另一些人则坐在更远的地方。背景中可以看到一艘船，这表明这是一个受欢迎的海滩旅游目的地。</td>
-      <td>两个人坐在海滩上，一边懒洋洋地躺在沙滩上，另一边则坐着。他们似乎正在享受海边时光。海滩上有几把椅子，其中一把靠近沙滩的左侧，另一把在中间。此外，还有一只狗躺在沙地上，为这个场景增添了一种放松的气氛。</td>
+      <td>在这张图片中，有一个装饰着奶酪的比萨饼和一片新鲜的青绿野餐毯。这看起来像是一块沙拉，给人一种清新、诱人、美味的享受体验。披萨的大小和大小暗示着一种随意和随意的用餐体验。画面中，一群人围坐在一块砖块上，其中一些则分散在桌子上，周围摆放着不同种类的青绿野餐毯。此外，桌子上还放着一块披萨片，上面摆放着各种各样的青绿野餐毯，营造出一种轻松愉快的氛围。</td>
+      <td>图中，比萨饼在木桌上。它被切成了比萨饼的大小，而且披萨放置在木桌上。比萨有很多配料，包括奶酪和各种酱汁。披萨有多种口味，包括经典的牛排式和意大利式，还有一些加在比萨表面。比萨上有很多新鲜水果，如西红柿和莫吉托，以及奶酪，使这幅图片更加丰富和有吸引力。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/彩虹瀑布-Rainbow-Falls.jpg" alt="rainbow-falls">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/red-sports-car-road.jpg" alt="red-car">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>照片捕捉到一幅美丽如画的大自然场景，背景是高山峦崖。在水边，一座巨大的喷泉横跨着水面，吸引着许多游客。水面上有几个人，他们或站或坐在喷泉周围，或站或坐。有些人可以看到他们在水中行走，而其他人则站在水边。总体而言，这幅画描绘的是一个美丽而宁静的环境，在那里人们可以欣赏到如画般的美景。</td>
-      <td>在一个美丽的蓝色天空下，一座巨大而巨大的白色瀑布上方悬挂着一只巨大的湿流水。这只瀑布位于一座山上，为整个场景增添了一种迷人而又宁静的气氛。在这幅图像的背景中，可以看到几艘船，其中一些靠近水边，其他的则离得较远。这些船只似乎正在为风景或户外活动做准备。</td>
+      <td>在这幅图片中，一辆白色的马车停泊在一条红色的路牌上。这个车辆位于一条绿油油的道路上，很可能是一个购物中心或高速公路。在这辆车的后部，可以看到一个绿色的马车停泊在路上，这是典型的户外场所。这辆马车可能是为了娱乐或观赏车辆而停放。</td>
+      <td>画面显示了一辆红色高性能赛车，停在一辆大型汽车后面。这辆车可以看到车身、汽车、汽车及汽车停在里面。它似乎是一辆大型红色汽车，有各种大小的汽车，表明它可能是汽车制造商生产的。此外，车辆周围的环境暗示了一种户外环境，因为一辆汽车也出现在场景中。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/椅子老人看书-Chair-Elderly-Reading.jpg" alt="elderly-reading">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/row-of-colorful-houses.jpg" alt="colorful-houses">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>图中，一个男人坐在公园的长椅上，旁边是一把绿色椅子。他身边有一本打开的书，上面写着"读书"一句话，暗示他可能正在阅读。公园里有一张长椅和一张公园长椅，为周围的环境增添了几分生气。在公园的周围，有几辆汽车和一辆卡车，表明这是一个公共区域。此外，还可以看到一个人站在公园的不同位置上，可能是等着上路或过马路。</td>
-      <td>一个穿着短裤的老人坐在公园长椅上，周围是树木。他似乎正在读一本书，可能是在读书。背景中有一座长凳，为这个场景提供了充足的座位。在背景中，可以看到一把椅子和一张餐桌，这说明这个场景可能是在一个户外座位区，那里有椅子供人们坐下来放松。</td>
+      <td>画面中，一座蓝色白色的大房子位于一条城市街道上，为这个地区增添了一丝自然与奇思妙想。墙上挂着一盏交通灯，为整个场景增添了特色和引人入胜。</td>
+      <td>画面中，一座蓝色房子旁边有很多小花瓶。这表明这座房子里可能正在营运一些小型小型花盆或盆栽植物。一些人聚集在房子周围，可能正在享受户外生活中的某种乐趣或美景。有些人站在画面中，而其他人则散布于场景中。总体而言，这幅场景捕捉到了一个美丽而令人愉快的场景，展示出该房子里一个令人放松和宁静的环境。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/熊猫草地-Panda-Grassland.jpg" alt="panda-grassland">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/snow-mountain-lake-view.jpg" alt="snow-mountain">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>图中，一只白色的棕熊坐在草地上，旁边是一只长着棕色斑点的大熊。这只熊看起来很害羞或顽皮，因为它正躺在草地上休息，看上去很放松。</td>
-      <td>在这幅图像中，一只棕色的熊正在草地上漫步。这只熊被放置在草地上，占据了画面的大部分空间。它似乎正在自然环境中行走，可能是在草地上。在背景中，有几棵树，为画面增添了自然元素。一只鸟在场景的中间附近飞翔，为画面增添了生气勃勃的气氛。</td>
+      <td>在这幅图片中，有一个高高的山，它看起来像是大森林中的一片高山。天空中闪烁着不同颜色的星星，给画面增加了一抹红点。天空中有两朵高大的树，树木高高地挂在一起，暗示着森林中的宁静与自然之美。在画面的中心，可以看到一棵高大的松树，树干上覆盖着一层薄薄的苔藓。这种高高的松树与周围的大山构成了一个有趣而引人入胜的背景，为这片自然之美增添了一丝神秘色彩。</td>
+      <td>这幅图片展示了一个令人印象深刻的宁静湖面。湖水从天上飘浮着，暗示着一个令人平静和放松的水面。湖边上有几匹高大、形状各异的景象，它们在湖面上显得格外美丽。此外，在湖的边缘，有一座巨大的高山，为整个湖景增添了几分神秘色彩。湖景中的天空也被描述得如画，给整个画面增添了一种纯净和宁静的气氛。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/自行车鲜花-Bicycle-Flowers.jpg" alt="bicycle-flowers">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/street-food-hotpot-table.jpg" alt="street-food">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>图片展示了一个漂亮的花瓶，里面插满了五颜六色的鲜花和花束。这些花束散落在整个花瓶中，给人一种赏心悦目的感觉。花瓶里插着五颜六色鲜花，创造出一种令人赏心悦目的景象。这些鲜花被摆放在一张桌子上，很可能是为了展示它们的美丽而摆放的。</td>
-      <td>场景中，一辆绿色和紫色相间的自行车停在一栋建筑旁边，它被放置在一棵大树旁。这辆自行车被摆放在附近，为这个场景增添了几分色彩。除了自行车外，还有一些其他的自行车，包括两个位于前景中的一个和位于背景中靠近中心位置的另一个。自行车的存在表明它可能是停在那里的。</td>
+      <td>图中，一大群人聚集在一张大餐桌旁欣赏着烤肉和热带水果，其中一人站在一碗里摆放着各种各样的盘子。桌子上放着几个碗，上面摆满了肉类和其他配料。有些放在盘子里，其他的则放在桌子上。在这张餐桌周围，有几个盘子，其中两个放着一杯酒，另一个放在靠近餐桌的左侧。</td>
+      <td>画面中，一群人聚集在一家大餐馆里，享受着一顿饭。这家餐厅的菜单上有一些生菜和猪肉，但它们已经被切成了四份，上面还有一个碗。他们拿着烤肉准备食用。在背景中，有几个瓶子在场景中。还有一把勺子位于桌子左侧，使盘子看起来更吸引人。一盆盆栽植物放在桌子左侧上方，为空间增添了一抹绿色。场景中的其他元素包括一个碗，里面放着葡萄酒和两根葡萄酒。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/舞蹈-dance.jpg" alt="dance">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/three-kittens-basket.jpg" alt="kittens">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>图片中的女人穿着一件白色连衣裙，脚上还系着一条黑色网球裙。她正在表演一个网球比赛，很可能是在比赛中。在背景中可以看到几把椅子，可能是为了观众或其他观众的座位安排而摆放的。此外，还有一个长凳放在场景左侧，为人们提供了一个休息的地方。</td>
-      <td>一名身穿白色衣服的女子站在舞台上，手里拿着一只手拿着白色飞盘。她似乎正在参加一个舞台舞会或比赛。场景中还有其他几个人，其中一个站在舞台左侧，另一个站在右侧，第三个人则站在场地右侧。舞台上有几个观众，有的站着，有的坐着，还有一些站着。这看起来像是一场欢乐的节日或活动。</td>
+      <td>图中，一只棕色的小灰猫正坐在篮子里。这只猫身上戴着一顶棕色的帽子，很可能是一个戴帽子的男人。在篮子里，一只棕色的紫色小灰猫正沿着篮子里去休息。这些小猫似乎也在享受这份温暖，但它们似乎并没有完全放过来。此外，背景中还可以看到一把剪刀。这把剪刀看起来是专门为小猫设计的，它可以用作家庭相册或礼物。在篮子的侧边，有几条篮子，其中一条是最亮的，另一条则是最暗的。在篮子中可以看到一只棕色小灰猫，而另一条则是更暗的。</td>
+      <td>在这张照片中，一只小猫坐在篮子里，紧挨着它坐在篮子里的那块木篮上。猫的身体上有九条纹毛发。这个场景描绘了它们之间的亲密关系，展示了它们在一起度过时光的不同场合。画面中，一群大的猫坐在篮子里，其中一只小猫也被描述为小猫，这可能表明他们正在享受与猫互动、与它们的互动或一起度过愉快时光。</td>
+    </tr>
+    <tr>
+      <td>
+        <img src="./dataset/eval_images/tropical-beach-palm-tree.jpg" alt="tropical-beach">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>在这张图片中，沙滩上有很多椅子，还有一些人站着，可以看到一把遮阳伞。虽然它看起来很大，但却没有任何特别的设计。沙滩上有许多椅子，表明这是一家餐馆或者服务员办公室。其中最引人注目的是一张海边椅子，椅子上放着一只热带海滩椅。这个椅子非常适合放松身心、享受海滩时光。此外，还有一些椅子和其他人在场景中，可能是为了放置食物或其他用途。靠近椅子的椅子表示该位置可供使用的其他人使用，也许也有一人在靠近那个椅子的地方。</td>
+      <td>图片显示了一个美丽的海滩场景，有很多椅子散布在天然的棕榈树上。其中一个椅子靠近海滩，而另一个则较小。沙滩上有两把椅子，其中一把靠近中间，另一把则稍微偏左，还有一些则在靠近边缘处。在海边的海滩周围，你可以看到几个人坐在海边的沙滩上，有的靠近海水中，还有一张沙滩椅。其中一张椅子靠近海滩，另一张椅子靠近海边。此外，还可以看到几只遮阳伞，为沙滩上的躺椅提供了遮阴。</td>
+    </tr>
+    <tr>
+      <td>
+        <img src="./dataset/eval_images/yellow-school-bus-road.jpg" alt="school-bus">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>画面中，一辆蓝色的黄色公共汽车正从一辆黄色公共汽车驶过，在道路上停泊着。这辆公共汽车看起来是在一个黄色的黄色高速公路上。图中有几个人，其中一些靠近前景，而另一些则靠后一些，但都没有看到。在黄色公共汽车附近，可以看到一辆停在路边，那辆停在路边。此外，还有两辆不同方向的巴士，一辆靠近前景，另一辆靠近前景，另一辆稍微靠后一些。</td>
+      <td>画面中，一辆黄色和黄色相间的黄色和蓝色交叉路口的蓝色公共汽车正在一条通往路缘上的红色公交车站。有几辆公共汽车正停在路边，它们离一排车道很近。在背景中，可以看到一些长凳，它们在城市里交叉起来。一个长凳位于图中最左侧，而另一个则稍微靠后一点，为画面增添了一些城市特色。整个场景中有很多人和车辆散落在场景各处，包括黄色和蓝色的交叉路口。整个场景给人一种忙碌和迷茫的感觉，这也突显了公共汽车在市区中的存在和目的。</td>
     </tr>
   </tbody>
 </table>
 
 ### 效果小结：
 
-视觉信号对于LLM视作一种特殊的外语，
-因此“学习外语”的能力高低，
-很大程度上取决于LLM的能力。
-LLM性能越强，对应的VLM必然越强，此时效果增益会很明显。
+两个模型均能识别图像主体（飞机、蛋糕、汽车、海滩等），但普遍存在重复表述和幻觉细节。受限于模型和数据规模，整体处于"能看懂大意、细节不准"的阶段。
+
+视觉信号对于LLM视作一种特殊的外语，因此"学习外语"的能力高低，很大程度上取决于LLM的能力。LLM性能越强，对应的VLM越强，此时效果增益会很明显。
 
 #### 未来值得改进的方面：
 
 ```text
-> 更简单的Projection的跨模态特征对齐方式，相较于Cross-Attention可能处于劣势。
-> Clip模型可以尝试更大性能更强的large系列，用更具细粒度的token表征图像特征，目前仍粗糙。
-> 分辨率不高，理论上只有224×224（minimind-v数据集为节省空间，仅设定为128×128）。
+> 可引入动态分辨率和Tile-based编码（如LLaVA-NeXT），突破固定分辨率限制。
+> Visual Encoder可升级为更强的视觉编码器，获取更细粒度的图像特征。
+> 拓展多图理解、视频理解和视觉定位（Visual Grounding）能力。
 > ...
 ```
 
-# 📌 Acknowledge
+# 📌 致谢
 
 > [!TIP]
 > 如果您觉得 `MiniMind-V`对您有所帮助，可以在 GitHub 上加一个⭐<br/>
 > 水平有限难免存在未知的纰漏，欢迎所有人在Issues交流指正或提交PR改进项目<br/>
 > 您的支持就是持续改进项目的动力，谢谢！
 
-## 🤝[贡献者](https://github.com/jingyaogong/minimind/graphs/contributors)
+## 🤝[贡献者](https://github.com/jingyaogong/minimind-v/graphs/contributors)
 
-<a href="https://github.com/jingyaogong/minimind/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=jingyaogong/minimind-v" />
+<a href="https://github.com/jingyaogong/minimind-v/graphs/contributors">
+  <img width="200" src="https://contrib.rocks/image?repo=jingyaogong/minimind-v" />
 </a>
 
 ## 😊鸣谢
 
 <a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>: <a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">多图vlm分支</a> | <a href="https://github.com/jingyaogong/minimind-v/tree/32cf4c5c01337231fd907b92d513de8945594263">仓库截至此版本提供</a> 
 
-<details close> 
+<details> 
 <summary> <b>参考链接 & 感谢以下优秀的论文或项目</b> </summary>
 
 - 排名不分任何先后顺序
@@ -661,19 +674,20 @@ LLM性能越强，对应的VLM必然越强，此时效果增益会很明显。
   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=jingyaogong/minimind-v&type=Date"/>
 </picture>
 
-# 🎓 Citation
+# 🎓 引用
 
-If you find MiniMind-V helpful in your research or work, please cite:
+如果您觉得 MiniMind-V 对您的研究或工作有所帮助，请引用：
 
 ```bibtex
-@misc{minimind,
-  title={MiniMind-V: Train a Tiny VLM from scratch},
-  author={Jingyao Gong},
-  year={2024},
-  howpublished={https://github.com/jingyaogong/minimind-v}
+@misc{minimind-v,
+  title = {MiniMind-V: Train a Tiny VLM from Scratch},
+  author = {Jingyao Gong},
+  year = {2024},
+  url = {https://github.com/jingyaogong/minimind-v},
+  note = {GitHub repository, accessed 2026}
 }
 ```
 
-# License
+# 📜 许可协议
 
-This repository is licensed under the [Apache-2.0 License](LICENSE).
+本仓库遵循 [Apache-2.0 License](LICENSE) 开源协议。

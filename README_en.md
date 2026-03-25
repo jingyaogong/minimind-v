@@ -34,7 +34,7 @@
 
 * This project aims to train a super-small multimodal vision-language model, **MiniMind-V**, with just a cost of 1.3 RMB
   and 1 hours of work, starting from scratch!
-* The smallest version of **MiniMind-V** is only about $\frac{1}{7000}$ the size of GPT-3, designed to enable fast
+* The smallest version of **MiniMind-V** is only about $\frac{1}{2600}$ the size of GPT-3, designed to enable fast
   inference and even training on personal GPUs.
 * **MiniMind-V** is an extension of the visual capabilities of the [MiniMind](https://github.com/jingyaogong/minimind)
   pure language model.
@@ -50,7 +50,7 @@
 
 <div align="center">
 
-![minimind2-v](./images/minimind2-v.gif)
+![minimind2-v](./images/minimind-3v.gif)
 
 [🔗🤖 Online Experience](https://www.modelscope.cn/studios/gongjy/MiniMind-V) | [🔗🎞️ Video Introduction](https://www.bilibili.com/video/BV1Sh1vYBEzY)
 
@@ -63,19 +63,34 @@ Is it really as complex as imagined to build a VLM-based multimodal large model?
 Is the training process difficult? Now, let's explore the answers and feel the joy of creation together!
 
 > [!TIP]
-> (As of 2025-02-20) The MiniMind-V series has completed the training of the following model versions, with the smallest
-> requiring only 26M (0.026B) parameters, capable of both image recognition and conversation!
+> (As of 2026-02-15) The MiniMind-V series has completed the training of the following model versions, with the smallest
+> requiring only 67M (0.067B) parameters, capable of both image recognition and conversation!
 
 | Model (Size)              | Inference Memory | Release    |
 |---------------------------|------------------|------------|
-| MiniMind2-V (104M)        | 0.6 GB           | 2025.02.20 |
-| MiniMind2-Small-V (26M)   | 1.1 GB           | 2025.02.20 |
+| minimind-3v-moe (201M-A67M) | 1.0 GB           | 2026.04.01 |
+| minimind-3v (67M)         | 0.5 GB           | 2026.04.01 |
+| MiniMind2-V (104M)        | 1.1 GB           | 2025.02.20 |
+| MiniMind2-Small-V (26M)   | 0.6 GB           | 2025.02.20 |
 | minimind-v-v1-small (27M) | 0.6 GB           | 2024.10.04 |
 | minimind-v-v1 (109M)      | 1.1 GB           | 2024.10.04 |
 
 ### 👉**Recent Updates**
 
-<details close> 
+<details> 
+<summary> <b>2026-04-01</b> </summary>
+
+- Added minimind-3v (67M) and minimind-3v-moe (201M-A67M) models
+- Unified 768+8 architecture, supporting both dense and moe modes
+- Switched Visual Encoder from CLIP to SigLIP2 (siglip2-base-p16-ve)
+- Replaced QFormer with MLP Projection + reshape compression
+- Dataset format updated to parquet, mixed data sources, updated tokenizer with image placeholder `<|image_pad|>`, new WebUI with dynamic model directory scanning and dropdown model switching
+- Model code refactored, LLM/VLM unified for Transformers format
+- Training scripts support DDP multi-GPU, bfloat16 mixed precision, torch.compile acceleration
+
+</details>
+
+<details> 
 <summary> <b>2025-10-24</b> </summary>
 
 - Bug fix: model weights mismatch
@@ -85,7 +100,7 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 
 </details>
 
-<details close> 
+<details> 
 <summary> <b>2025-04-27</b> </summary>
 
 - Compatibility updates
@@ -94,20 +109,17 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 
 </details>
 
-<details close> 
-<summary> <b>2025-02-20</b> </summary>
+<details>
+
+<summary> <b>More...</b> </summary>
+
+**2025-02-20**
 
 - MiniMind2-V updated alongside MiniMind2
 - Significant reduction of all redundant code, standardized code format
 - Major simplification of the model's redundant structure
 - Updated dataset format, expanded with new SFT datasets
 - Better performance than the previous VLM version!
-
-</details>
-
-<details close>
-
-<summary> <b>More...</b> </summary>
 
 **2024-10-05**
 
@@ -117,7 +129,7 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 
 # 📌 Quick Start
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>Sharing my hardware and software configuration (for reference only)</summary>
 
 * CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
@@ -134,64 +146,65 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 
 ```bash
 # Clone the code repository
-git clone https://github.com/jingyaogong/minimind-v
+git clone --depth 1 https://github.com/jingyaogong/minimind-v
 ```
 
 ```bash
-# Download the clip model to the ./model/vision_model directory
-git clone https://huggingface.co/openai/clip-vit-base-patch16
+# Download the siglip2 model to the ./model directory
+git clone https://huggingface.co/jingyaogong/siglip2-base-p16-ve
 # or
-git clone https://www.modelscope.cn/models/openai-mirror/clip-vit-base-patch16
+git clone https://modelscope.cn/models/gongjy/siglip2-base-p16-ve
 ```
 
 ```bash
 # Download the minimind language model to the ./out directory (as the base language model for training VLM):
 # HuggingFace
-https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_512.pth # or llm_768.pth
+https://huggingface.co/jingyaogong/minimind-3v-pytorch/blob/main/llm_768.pth
 # Domestic source
-https://modelscope.cn/models/gongjy/MiniMind2-V-PyTorch/resolve/master/llm_512.pth # or llm_768.pth
+https://modelscope.cn/models/gongjy/minimind-3v-pytorch/resolve/master/llm_768.pth
 ```
 
 
 ## Ⅰ Test an existing model's performance
 
-### 1. Environment Preparation
+### 1' Environment Preparation
 
 ```bash
 pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
 ```
 
-### 2. Download the model
+### 2' Download the model
 
 ```bash
-git clone https://huggingface.co/jingyaogong/MiniMind2-V
+git clone https://huggingface.co/jingyaogong/minimind-3v
 ```
 
-### 3. Command-line Q&A
+### 3' Command-line Q&A
 
 ```bash
 # load_from='model': load native PyTorch weights, load_from='other path': load transformers format
 python eval_vlm.py --load_from model --weight sft_vlm
 
 # Or use transformers format model
-python eval_vlm.py --load_from MiniMind2-V
+python eval_vlm.py --load_from minimind-3v
 ```
 
-### 4. Or start the WebUI
+### 4' Or start the WebUI
 
 ```bash
-python web_demo_vlm.py
+# ⚠️ You must first copy the transformers model folder to the ./scripts/ directory (e.g.: cp -r minimind-3v ./scripts/minimind-3v). The web_demo_vlm script will automatically scan subdirectories containing weight files; it will report an error if none are found.
+cd scripts && python web_demo_vlm.py
 ```
 
 ## Ⅱ Train from scratch
 
-### 1. Environment Preparation
+### 1' Environment Preparation
 
 ```bash
 pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
 ```
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>Note: Test if Torch can use CUDA</summary>
 
 ```bash
@@ -206,12 +219,12 @@ for help.
 
 </details>
 
-### 2. Download Data
+### 2' Download Data
 
 Download the required content from the [dataset link](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset) 
 and place it under `./dataset`.
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>Note: Dataset Details</summary>
 
 **[Note 1]** Previously, extracting 500k fragmented image files could be very slow. From 2025-12-27, dataset format is unified to Parquet with image-text integrated storage, smaller size, no decompression needed, faster loading.
@@ -232,7 +245,7 @@ Please reserve about ~2GB of space for the dataset. If there is insufficient spa
 
 </details>
 
-### 3. Start Training
+### 3' Start Training
 
 **3.1 Pretraining (Learning image description)**
 
@@ -242,7 +255,7 @@ python train_pretrain_vlm.py --epochs 4 --from_weight llm
 ```
 
 > Run pretraining to get `pretrain_vlm_*.pth` as the pretrained model's output weights (* represents the model
-> dimension, default is 512).
+> dimension, default is 768).
 
 **3.2 Supervised Fine-Tuning (Learning image-caption dialogue style)**
 
@@ -253,7 +266,7 @@ python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 
 > Perform supervised fine-tuning to get `sft_vlm_*.pth` as the output weights for the fine-tuned model.
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>Note: Training Details</summary>
 
 **Training Features:**
@@ -278,11 +291,11 @@ python train_sft_vlm.py --epochs 4 --from_resume 1
 
 ---
 
-### 4. Test the Model's Performance
+### 4' Test the Model's Performance
 
 Ensure that the model `*.pth` file you want to test is located in the `./out/` directory.
 You can also directly download the pre-trained `*.pth` file
-from [here](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch).
+from [here](https://huggingface.co/jingyaogong/minimind-3v-pytorch).
 
 ```bash
 # Test SFT model (default)
@@ -304,7 +317,7 @@ Single-machine N-card training method (DDP, supports multi-machine multi-card cl
 torchrun --nproc_per_node N train_xxx.py
 ```
 
-<details style="color:rgb(128,128,128)">
+<details>
 <summary>Note: Other Details</summary>
 
 Single-machine N-card training (DeepSpeed)
@@ -343,8 +356,8 @@ understanding of MiniMind (LLM).
 
 MiniMind-V's structure adds two submodules, a Visual Encoder and a feature projection, with a modality-mixing branch to
 support inputs from multiple modalities:
-![LLM-structure](./images/VLM-structure.png)
-![LLM-structure](./images/VLM-structure-moe.png)
+![LLM-structure](./images/VLM-structure.jpg)
+![LLM-structure](./images/VLM-structure-moe.jpg)
 
 
 <details>
@@ -397,22 +410,20 @@ outputs the end token; here, the "token" doesn’t necessarily have to be text!
    better understanding images.
 
 The "foreign language dictionary" is referred to as the Visual Encoder model.  
-Like LlaVA, Qwen-VL, and other visual language models, MiniMind-V also uses the open-source Clip series models as the
+Like LlaVA, Qwen-VL, and other visual language models, MiniMind-V now uses the open-source SigLIP2 series models as the
 Visual Encoder.  
-Specifically, we use [clip-vit-base-patch16](https://huggingface.co/openai/clip-vit-base-patch16), a classic Visual
+Specifically, we use [siglip2-base-p16-ve](https://huggingface.co/jingyaogong/siglip2-base-p16-ve), a Visual
 Encoder based on the ViT-B/16 architecture for describing image-text information.  
-The input image size is 224x224, and because the Patch size is 16×16, it generates 14*14=196 tokens as the input to the
+The current SigLIP2 NaFlex vision encoder generates up to 256 patch tokens from the processor output as the input to the
 encoder layer, which produces a 1×768 dimensional embedding vector for calculating error with the text.  
 We don’t need the final embedding representation, so we only take the output from the encoder layer, which is the output
 feature from the core ViT backbone.  
-It receives the feature of size 196×768 from the previous layer, which we use as 196 visual tokens to input into
-MiniMind-V.  
-After obtaining the image encoder features, the integration with the LLM requires aligning the 768-dimensional visual
-tokens with the LLM's text tokens, and mapping the image features into the same space as text embeddings. In other
+It receives 256×768 features from the previous layer, which are then reshaped by concatenating every 4 adjacent tokens into 1 (256×768 → 64×3072), then projected to the LLM's hidden dimension via a 2-layer MLP (Linear→GELU→Linear), resulting in 64 visual tokens input into MiniMind-V.
+After obtaining the image encoder features, the integration with the LLM requires aligning the visual features to the LLM's text token dimension, and mapping the image features into the same space as text embeddings. In other
 words, the image features and native visual tokens cannot be directly treated the same; they require cross-modal feature
-alignment.  
-[LlaVA-1](https://arxiv.org/pdf/2304.08485) uses a simple unbiased linear transformation to achieve this, with great
-success, and MiniMind-V does the same.
+alignment.
+
+[LlaVA-1](https://arxiv.org/pdf/2304.08485) achieves good alignment with a simple linear transformation, [LlaVA-1.5](https://arxiv.org/pdf/2310.03744) upgrades to a 2-layer MLP. MiniMind-V adopts the same MLP Projection approach as LlaVA-1.5, combined with reshape for token compression.
 
 ![llava-structure](./images/llava-structure.png)
 
@@ -434,108 +445,92 @@ For example:
 <image>\nWhat is in this image?
 ```
 
-In `minimind-v`, the image is replaced by a 196-character `@@@...@@@` placeholder. The reason for using 196 characters
-is explained earlier:  
-Any image is encoded by the Clip model as 196×768-dimensional tokens,  
+In `minimind-v`, the image is replaced by 64 `<|image_pad|>` tokens as placeholder (the 256 SigLIP2 patch features are compressed to 64 tokens via reshape+MLP),  
 thus the `minimind-v` prompt becomes:
 
 ```text
-@@@......@@@\nWhat is this image describing?
+<|image_pad|><|image_pad|>...<|image_pad|>(×64)\nWhat is this image describing?
 ```
 
-After calculating the embedding and projection, and replacing the image token part, the entire calculation process to
-output is no different from that of the LLM part.
+After calculating the embedding and projection, the vision features replace the corresponding placeholder embeddings, and the rest of the computation is identical to the LLM part.
 
-![input](./images/minimind-v-input.png)
+![input](./images/minimind-v-input.jpg)
 
-At this point, all the details of `MiniMind-V` have been presented.
-The `MiniMind-V` model subclass completely inherits from `MiniMind`,
-and is generated with **minimal** changes based on the latter,
-with core algorithm modifications `< 50 lines`, making the migration difficulty very low.
-Therefore, there may be differences with models like `LlAVA`, but the overall idea remains consistent.
+At this point, all the details of `MiniMind-V` have been presented. The VLM model subclass inherits from `MiniMind` with only **minimal** changes, core algorithm modifications `< 50 lines`, very low migration difficulty. The specific implementation may differ from `LlaVA` and similar models, but the overall idea is consistent.
 
 # 📌 Experiment
 
 ## Ⅰ Dataset
 
-Source: [Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions)  
-Contains approximately 570,000 pre-trained images from CC-3M and COCO 2014;  
-[llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k)  
-Contains 300k instruction fine-tuning data and 150k images.  
-The Q&A content has been translated, with better support for Chinese, further organized and resized.
+Original Source:
+- [Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions): Contains approximately 570,000 pre-trained images from CC-3M and COCO 2014
+- [llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k): Contains 300k instruction fine-tuning data and 150k images
+- [LLaVA-SFT-665K](https://huggingface.co/datasets/csuhan/LLaVA-SFT-665K): Contains 665k instruction fine-tuning data
 
-(pretrain_vlm_data.jsonl) Pre-training dataset format:
+The dataset contains both Chinese and English data. The Q&A content has been translated, with better support for Chinese, further organized and resized (pretrain resolution 128×128, sft resolution 160×160).
 
-```json lines
-{
-  "conversations": [
-    {
-      "role": "user",
-      "content": "Provide a brief description of the given image.\n<image>"
-    },
-    {
-      "role": "assistant",
-      "content": "Olive oil is a healthy ingredient for free use."
-    }
-  ],
-  "image": "GCC_train_002582585.jpg"
-}
+(pretrain_i2t.parquet) Pre-training dataset format:
+
+```text
+Columns: conversations (json string), image_bytes (binary), image_names (string)
+
+conversations example:
+[
+  {"role": "user", "content": "Provide a brief description of the given image.\n<image>"},
+  {"role": "assistant", "content": "Olive oil is a healthy ingredient for free use."}
+]
+image_bytes: <binary image data>
 ```
 
-(sft_vlm_data.jsonl) Single image instruction fine-tuning dataset format:
+(sft_i2t.parquet) Single image instruction fine-tuning dataset format:
 
-```json lines
-{
-  "conversations": [
-    {
-      "role": "user",
-      "content": "What impact does the location of the alarm clock have on sleep quality?<image>"
-    },
-    {
-      "role": "assistant",
-      "content": "Place the digital alarm clock on the nightstand..."
-    }
-  ],
-  "image": "train-00000-of-00001_image_0_0.jpg"
-}
+```text
+Columns: conversations (json string), image_bytes (binary), image_names (string)
+
+conversations example:
+[
+  {"role": "user", "content": "What impact does the location of the alarm clock have on sleep quality?<image>"},
+  {"role": "assistant", "content": "Place the digital alarm clock on the nightstand..."}
+]
+image_bytes: <binary image data>
 ```
 
+> Note: sft_i2t.parquet contains ~580K samples in total, of which ~236K are image-text conversations (i2t) and ~346K are pure text conversations (t2t). The latter is used to preserve the model's base language capabilities.
 
 Dataset download
 link: ([ModelScope](https://www.modelscope.cn/datasets/gongjy/minimind-v_dataset) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))
 
 ## Ⅱ Training
 
+Training is divided into two stages, both freezing the Visual Encoder gradients and only training the Projection and LLM parts.
+Training is initialized from LLM pre-trained weights, with support for DDP multi-GPU training, mixed precision (bfloat16), torch.compile acceleration, and swanlab logging.
+
 > train_pretrain_vlm
 
-Pre-training learns general image knowledge from a dataset of 595K samples, such as a deer is a deer, a dog is a dog.
+The pre-training stage learns general image knowledge from ~1.13M image-text description pairs (e.g., a deer is a deer, a dog is a dog).
+This stage uses a higher learning rate (1e-4), max sequence length of 360, freezes the LLM main parameters, and only sets the Projection and LLM's layer 0 as learnable,
+aiming to quickly establish a basic mapping from visual features to the language space while avoiding damage to the LLM's existing language capabilities.
 
 > train_sft_vlm
 
-Instruction fine-tuning learns the real Q&A format for image-related questions from a dataset of 300K real
-conversations, which better aligns with human communication habits.
-
-During training, the visual encoder, i.e., the CLIP model's gradients, are frozen, and only the Projection and LLM parts
-are trained.  
-In pre-training, only the last layer parameters of Projection and LLM are learnable.  
-In instruction fine-tuning, all parameters of Projection and LLM are learnable.
+The instruction fine-tuning stage learns real Q&A formats from ~580K samples, of which ~236K are image-text multi-turn conversations and ~346K are pure text conversations (to preserve LLM base capabilities).
+This stage uses a lower learning rate (1e-5~1e-6), max sequence length of 768, unfreezes all Projection and LLM parameters for full fine-tuning,
+enabling the model to conduct multi-turn conversations based on image content, while mitigating catastrophic forgetting through the mixed-in pure text data.
 
 > Training Time and Loss Trend (for reference only)
 
-Pretrain [512+8] & [768+16]  
-![input](./images/pretrain_loss.png)
+Pretrain [768+8] (dense & moe)  
+![input](./images/pretrain_loss.jpg)
 
-SFT [512+8] & [768+16]  
-![input](./images/sft_loss.png)
+SFT [768+8] (dense & moe)  
+![input](./images/sft_loss.jpg)
 
 ## Ⅲ Model Weights
 
-(Native PyTorch `*.pth` weight files) Download link:  
-([ModelScope](https://www.modelscope.cn/models/gongjy/MiniMind2-V-PyTorch) | [HuggingFace](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch))
-
-(`Transformers` format models)  
-Download link:  
-([ModelScope](https://www.modelscope.cn/profile/gongjy) | [HuggingFace](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d))
+| Format | ModelScope | HuggingFace |
+|---|---|---|
+| Native PyTorch (`*.pth`) | [minimind-3v-pytorch](https://www.modelscope.cn/models/gongjy/minimind-3v-pytorch) | [minimind-3v-pytorch](https://huggingface.co/jingyaogong/minimind-3v-pytorch) |
+| Transformers | [minimind-v collection](https://modelscope.cn/collections/MiniMind-V-42b841dde22d41) | [minimind-v collection](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d) |
 
 > Note: The Transformers version is the `MiniMind-V` model after single-image instruction fine-tuning
 
@@ -548,91 +543,107 @@ Download link:
 <table>
   <thead>
     <tr>
-      <th>Image</th>
-      <th>MiniMind2-V</th>
-      <th>MiniMind2-V-Small</th>
+      <th>image</th>
+      <th>minimind-3v</th>
+      <th>minimind-3v-moe</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>
-        <img src="./dataset/eval_images/城市车水马龙-city-traffic.jpg" alt="city-traffic">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/airplane-flying-blue-sky.jpg" alt="airplane">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a busy city street with tall buildings on both sides of a long road. The street is packed with cars, trucks, and buses, along with many other vehicles driving on the road. There are many cars visible on the street, some driving at high speed, while others are parked at the side. Additionally, there is a bus parked on the right side of the street. Traffic lights are visible on the street, indicating a busy city environment.</td>
-      <td>The image depicts a bustling urban scene with several cars and a truck driving down the city street. There are many traffic lights visible, some on the left side of the street, and others on the right. Several pedestrians can be seen on the street, some standing closer to the road while others are farther away. A parking sign is located on the left side of the image, hinting at the city environment. Two cars are visible on the street, one on the right and the other on the left, with another one also on the left side. This image captures a typical day in a city environment.</td>
+      <td>The image features a white and black airplane parked on a grassy terrain. The layers of a building are likely to be filled with air traffic control, such as the building's tall building, the large building, or the overall pavement. There are also two airplanes parked in the background. The airplanes are displayed on a board, and the airplane is flying through the air while the black and white airplane is parked on the ground.</td>
+      <td>The image features a large jetliner with a large airplane sitting on the ground. It is likely an airplane or an aircraft, possibly a flight jet or a runway.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/太空宇航员-Astronaut-Space.jpg" alt="astronaut">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/birthday-cake-candles-table.jpg" alt="birthday-cake">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows an astronaut in a spacesuit sitting in a large spacecraft. They appear to be embarking on or disembarking from a space mission. Behind the astronaut, there is a rocket launch platform, likely to support the astronaut's mission during the journey. Additionally, an aircraft is parked near a hangar, further suggesting this is an aviation event. There are a few people around the aircraft, some standing close, possibly observing or waiting for the spacecraft to prepare for takeoff.</td>
-      <td>The scene shows a soldier wearing a helmet standing on a large airplane. This aircraft appears to be a military one, likely preparing to board another plane. Another person stands in front, possibly observing the flight process. There are several people around the airplane, some standing on the left side, others on the right. They seem to be watching the pilot's performance. Additionally, a truck is parked near the left side, likely to observe the flight process more closely.</td>
+      <td>The image features a white cake in an old-fashioned cake with cake placed on it. It is surrounded by a few cooked ingredients, including the wedding cake.</td>
+      <td>The image features a white cake in an old-fashioned cake with cake placed on it. It is surrounded by a few cooked ingredients, including the wedding cake.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/小狗美女海边-Dog-Woman-Sea.jpg" alt="dog-woman-sea">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/pizza-on-wooden-board.jpg" alt="pizza">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a woman sitting on the beach, holding a white dog in her hands. She appears to be a woman sitting on the sand, looking at her. A dog is also sitting beside her, looking relaxed and comfortable. Other beachgoers are scattered across the beach, some sitting, while others are farther away. A boat can be seen in the background, indicating that this is a popular beach destination for tourists.</td>
-      <td>Two people are sitting on the beach, one lounging lazily on the sand, while the other is sitting. They seem to be enjoying their time by the sea. There are a few beach chairs, one close to the left side of the sand, another in the middle. Additionally, a dog is lying on the sand, adding to the relaxed atmosphere of the scene.</td>
+      <td>The image depicts a delicious pizza pizza with fresh toppings, which are likely present in a slice of pizza. The pizza is perfectly crispy, as it has a crispy crust and slightly crispy, making it a delightful pizza presentation. The pizza is filled with fresh toppings, adding to the crispy crust. The pizza is also a bit scrambled, as it has a fresh topping, while the crispy crust is cooked with a pizza pan. The pizza is likely to be a pizza with its crunchy texture and flavorfully. The pizza is also a popular choice for pizza with others, and it is a filling and crispy crust.</td>
+      <td>The image features a scenic burning pizza in a pasta-style board, surrounded by a wooden cabinet, a garner topping for cheese and vegetables. There is a small cabinet nearby, with a pan-familt, a pizza flatter topping. The pizza is situated on the left side of the board, with a bowl of olives placed on top of the side.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/彩虹瀑布-Rainbow-Falls.jpg" alt="rainbow-falls">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/red-sports-car-road.jpg" alt="red-car">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The photo captures a beautiful natural scene with high mountains in the background. By the water, a large fountain spans across the surface, attracting many visitors. There are several people on the water's surface, some standing or sitting around the fountain, while others walk in the water. Overall, this image portrays a beautiful and peaceful environment where people can enjoy scenic views of nature.</td>
-      <td>Under a beautiful blue sky, a massive white waterfall hangs above with a huge stream of wet water. This waterfall is located on a mountain, adding a charming and serene atmosphere to the whole scene. In the background of this image, several boats can be seen, some near the water's edge, others farther away. These boats seem to be preparing for scenic or outdoor activities.</td>
+      <td>The image shows a yellow yellow and red turf coastline on a street, with a couple of cars and a yellow and red traffic lights in the background.</td>
+      <td>The image features a couple of female vanity van lying on a car. The car is situated on the ground, surrounded by a wet furniture. The couple is seen in the middle of the car, possibly observing the scene.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/椅子老人看书-Chair-Elderly-Reading.jpg" alt="elderly-reading">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/row-of-colorful-houses.jpg" alt="colorful-houses">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a man sitting on a park bench next to a green chair. There is an open book beside him with the words "reading" written on it, suggesting he may be reading. The park has a bench and a park seat, adding life to the surrounding environment. There are several cars and a truck nearby, indicating this is a public space. Additionally, a person can be seen standing at different locations in the park, possibly waiting to cross the road or walk further.</td>
-      <td>An elderly person wearing shorts sits on a park bench surrounded by trees. He seems to be reading a book, possibly engaged in reading. In the background, there is another bench providing ample seating for the scene. You can also see a chair and a table in the background, suggesting this may be an outdoor seating area where people can relax.</td>
+      <td>IoT tree is a holiday that is often associated with Christmas culture, history, and celebration. The tree has a unique black and white striped pattern, which features a sweet treat, a budget-friendly chocolate cake with brown spots. The cake is burnt and has a balcony with a sweet treat, with the rich, vibrant colors of the striped pattern. The tree has a rich and burnt color, while the rich and vibrant colors are visually appealing. The tree has a striped pattern, which adds to the overall atmosphere of the image.</td>
+      <td>The image is a colorful scene of a colorful vintage house, with a large pink roof of the wall and a red color scheme. The colorful vintage house has a pink color, and the color scheme appears to be fine, with a red color scheme.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/熊猫草地-Panda-Grassland.jpg" alt="panda-grassland">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/snow-mountain-lake-view.jpg" alt="snow-mountain">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a white brown bear sitting on the grass, next to a large bear with brown spots. This bear seems shy or playful as it lies on the grass, resting and looking relaxed.</td>
-      <td>In this image, a brown bear is strolling on the grass. The bear occupies much of the frame, seemingly walking in its natural environment on the grass. In the background, there are several trees, adding natural elements to the scene. A bird is flying near the middle of the scene, bringing a lively atmosphere to the image.</td>
+      <td>The image features a snowy mountain surrounded by a large, dense mountains. The large body of water is quite dense, with the body of water being hot and the water is sandy. The tall trees are swirls, and the tall trees are standing on the snow-covered ground. The body of water is also sink, creating a savanna-like appearance.</td>
+      <td>The image is an image of a large mountain visible in a lake, surrounded by the idyllic mountains and the mountains. It appears to be a blanket in the ocean, with the river and idylis watching the sea. The mountains are lined with fresh sand and waves, adding a sense of tranquility to the scene.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/自行车鲜花-Bicycle-Flowers.jpg" alt="bicycle-flowers">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/street-food-hotpot-table.jpg" alt="street-food">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a beautiful vase filled with colorful flowers and bouquets. The bouquets are scattered throughout the vase, creating a visually pleasant scene. The colorful flowers in the vase create a delightful visual. These flowers are placed on a table, likely displayed to showcase their beauty.</td>
-      <td>The scene shows a green and purple bicycle parked next to a building, placed near a large tree. This bicycle is situated nearby, adding some color to the scene. In addition to the bicycle, there are other bicycles, including one in the foreground and another near the center of the background. The presence of the bicycles suggests they may be parked there.</td>
+      <td>The image shows a variety of cooking options, including baking meat, cupcakes, and spinach. The baked vegetables are rich in a variety of flavors, including grilled, sautéed, and baked vegetables. The presence of a baked vegetable with a variety of vegetables in different parts suggests a variety of options, including baking, cooking, and baking. The cooking process is highly recommended, with a mix of vegetables and baking times, making it an ideal choice for those who prefer a variety of cooking options. The cooking process is also highly compatible, with a variety of flavors and textures enjoying the cooking process.</td>
+      <td>The image features a variety of freshwater salads, glasses, and coworkers displayed on a table. There is a mix of freshwater ingredients, likely a bun, which can be seen in the menu. The freshwater ingredients are placed on the table, and there is a portion of the coworkers displayed in the middle of the room. There is also a bowl filled with various ingredients.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/舞蹈-dance.jpg" alt="dance">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img src="./dataset/eval_images/three-kittens-basket.jpg" alt="kittens">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The woman in the image is wearing a white dress with a black tennis skirt. She is performing a tennis match, likely part of the competition. Several chairs are visible in the background, possibly set up for the audience or other spectators. Additionally, a bench is placed on the left side of the scene, providing a place for people to rest.</td>
-      <td>A woman in white clothing stands on a stage holding a white frisbee. She seems to be participating in a stage dance or competition. Several other people are present in the scene, one standing on the left side of the stage, another on the right, and a third person standing near the right of the venue. The stage has several spectators, some standing, others sitting, with some remaining standing. This appears to be a joyful festival or event.</td>
+      <td>The image features a table filled with people standing together, casing bars, and a pair of brown cats. The table is filled with pink and white cats.</td>
+      <td>The image is a black and white detail of a miscellaneous bunch of toys, which is likely to be a part of a group or a similar artistic field.</td>
+    </tr>
+    <tr>
+      <td>
+        <img src="./dataset/eval_images/tropical-beach-palm-tree.jpg" alt="tropical-beach">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The image features a brown wooden coat.</td>
+      <td>The image shows a sandy beach with an umbrella on top of a chair, providing a visual appeal for people to sit on.</td>
+    </tr>
+    <tr>
+      <td>
+        <img src="./dataset/eval_images/yellow-school-bus-road.jpg" alt="school-bus">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      </td>
+      <td>The image displays a group of people sitting on the bus. They are waiting to be cautious and attentive to their feet, which indicates they are likely to be cautious and followed by the bus.</td>
+      <td>The image features a large collection of school buses, a brick-and-middle bus, and a stack of cars visible in the background. The school bus is situated next to a school bus, and there are several people watching the bus. The school bus is visible in the background, with one person standing behind the other, while the other person is watching the bus. The bus is positioned behind the school bus, creating a seamless and dynamic visual effect.</td>
     </tr>
   </tbody>
 </table>
 
 ### Effect Summary:
 
-Visual signals are treated as a special foreign language by LLMs, so the "language learning" ability highly depends on
-the LLM's capacity. The stronger the LLM, the more powerful the corresponding VLM, and the performance boost becomes
-significant.
+Both models can identify image subjects (airplane, cake, car, beach, etc.), but commonly exhibit repetitive expressions and hallucinated details. Limited by model and data scale, the overall performance is at a stage of "understanding the gist but inaccurate on details".
+
+Visual signals are treated as a special foreign language by LLMs, so the "language learning" ability highly depends on the LLM's capacity. The stronger the LLM, the more powerful the corresponding VLM, and the performance boost becomes significant.
 
 #### Future Areas for Improvement:
 
 ```text
-> Simpler projection-based cross-modal feature alignment, which may be inferior compared to Cross-Attention.
-> The Clip model could try larger, more powerful large series for finer-grained token representations of image features, as they are still coarse.
-> The resolution is not high, theoretically only 224×224 (the minimind-v dataset is set to 128×128 for space saving).
+> Introduce dynamic resolution and Tile-based encoding (like LLaVA-NeXT) to break through the fixed resolution limit.
+> Visual Encoder could be upgraded to stronger vision encoders for finer-grained image features.
+> Extend multi-image understanding, video understanding, and Visual Grounding capabilities.
 > ...
 ```
 
@@ -644,17 +655,17 @@ significant.
 > to improve the project in Issues. <br/>
 > Your support is the driving force behind continuous improvements to the project. Thank you!
 
-## 🤝 [Contributors](https://github.com/jingyaogong/minimind/graphs/contributors)
+## 🤝 [Contributors](https://github.com/jingyaogong/minimind-v/graphs/contributors)
 
-<a href="https://github.com/jingyaogong/minimind/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=jingyaogong/minimind-v" />
+<a href="https://github.com/jingyaogong/minimind-v/graphs/contributors">
+  <img width="200" src="https://contrib.rocks/image?repo=jingyaogong/minimind-v" />
 </a>
 
 ## 😊 Acknowledgments
 
 <a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>: <a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">Multi-image VLM branch</a> | <a href="https://github.com/jingyaogong/minimind-v/tree/32cf4c5c01337231fd907b92d513de8945594263">Repository provided up to this version</a> 
 
-<details close> 
+<details> 
 <summary> <b>Reference Links & Thanks to the following excellent papers or projects</b> </summary>
 
 - No particular order
@@ -693,15 +704,16 @@ significant.
 If you find MiniMind-V helpful in your research or work, please cite:
 
 ```bibtex
-@misc{minimind,
-  title={MiniMind-V: Train a Tiny VLM from scratch},
-  author={Jingyao Gong},
-  year={2024},
-  howpublished={https://github.com/jingyaogong/minimind-v}
+@misc{minimind-v,
+  title = {MiniMind-V: Train a Tiny VLM from Scratch},
+  author = {Jingyao Gong},
+  year = {2024},
+  url = {https://github.com/jingyaogong/minimind-v},
+  note = {GitHub repository, accessed 2026}
 }
 ```
 
-# License
+# 📜 License
 
 This repository is licensed under the [Apache-2.0 License](LICENSE).
 

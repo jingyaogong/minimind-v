@@ -18,22 +18,34 @@ hf_logging.set_verbosity_error()
 warnings.filterwarnings('ignore')
 
 
-def init_model(lm_config):
-    tokenizer = AutoTokenizer.from_pretrained(args.load_from)
-    if 'model' in args.load_from:
-        moe_path = '_moe' if lm_config.use_moe else ''
-        ckp = f'../{args.save_dir}/{args.weight}_{lm_config.hidden_size}{moe_path}.pth'
-        model = MiniMindVLM(lm_config, vision_model_path="../model/vision_model/clip-vit-base-patch16")
-        state_dict = torch.load(ckp, map_location=args.device)
-        model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=False)
-    else:
-        model = AutoModelForCausalLM.from_pretrained(args.load_from, trust_remote_code=True)
-        model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("../model/vision_model/clip-vit-base-patch16")
+def scan_vlm_models(base_dir):
+    models = {}
+    base_dir = os.path.abspath(base_dir)
+    for d in sorted(os.listdir(base_dir), reverse=True):
+        full_path = os.path.join(base_dir, d)
+        if not os.path.isdir(full_path) or d.startswith('.') or d.startswith('_'):
+            continue
+        files = os.listdir(full_path)
+        has_model = any(f.endswith(('.bin', '.safetensors')) for f in files) or 'model.safetensors.index.json' in files
+        if has_model:
+            models[d] = full_path
+    return models
 
-    print(f'VLM参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
 
-    vision_model, preprocess = model.vision_encoder, model.processor
-    return model.eval().to(args.device), tokenizer, vision_model.to(args.device), preprocess
+def load_vlm_model(model_path):
+    global model, tokenizer, preprocess, lm_config, current_model_name
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True)
+    model.vision_encoder, model.processor = MiniMindVLM.get_vision_model(vision_model_path)
+    if model.vision_encoder is None: raise FileNotFoundError(f"视觉编码器未找到: {vision_model_path}")
+    preprocess = model.processor
+    lm_config = model.config
+    model = model.eval().to(device)
+    model.vision_encoder = model.vision_encoder.to(device)
+    current_model_name = os.path.basename(model_path)
+    param_str = f'{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M'
+    print(f'已加载 {current_model_name}，参数量：{param_str}')
+    return f"已加载: {current_model_name} ({param_str})"
 
 
 class CustomStreamer(TextStreamer):
@@ -48,33 +60,34 @@ class CustomStreamer(TextStreamer):
             self.queue.put(None)
 
 
-def chat(prompt, current_image_path):
+def chat(prompt, current_image_path=None):
     global temperature, top_p
-    image = Image.open(current_image_path).convert('RGB')
-    pixel_values = MiniMindVLM.image2tensor(image, preprocess).to(model.device).unsqueeze(0)
-
-    prompt = f'{lm_config.image_special_token}\n{prompt}'
+    pixel_values = None
+    if current_image_path:
+        image = Image.open(current_image_path).convert('RGB')
+        pixel_values = {k: v.to(model.device) for k, v in MiniMindVLM.image2tensor(image, preprocess).items()}
+        prompt = f'{lm_config.image_special_token * lm_config.image_token_len}\n{prompt}'
     messages = [{"role": "user", "content": prompt}]
 
     new_prompt = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
         add_generation_prompt=True
-    )[-args.max_seq_len + 1:]
+    )[-max_seq_len + 1:]
 
     with torch.no_grad():
         inputs = tokenizer(
             new_prompt,
             return_tensors="pt",
             truncation=True
-        ).to(args.device)
+        ).to(device)
         queue = Queue()
         streamer = CustomStreamer(tokenizer, queue)
 
         def _generate():
             model.generate(
                 inputs.input_ids,
-                max_new_tokens=args.max_seq_len,
+                max_new_tokens=max_seq_len,
                 do_sample=True,
                 temperature=temperature,
                 top_p=top_p,
@@ -99,100 +112,58 @@ def launch_gradio_server(server_name="0.0.0.0", server_port=7788):
     temperature = args.temperature
     top_p = args.top_p
 
-    with gr.Blocks() as demo:
-        gr.HTML(f"""
-            <div style="text-align: center; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center;">
-                <img src="https://www.modelscope.cn/api/v1/studio/gongjy/MiniMind/repo?Revision=master&FilePath=images%2Flogo2.png&View=true" 
-                     style="height: 60px;">
-                <span style="margin: 0 0 0 1rem;font-size:40px;font-style: italic;font-weight:bold;">Hi, I'm MiniMind2-V</span>
-            </div>
-            """)
+    def respond(message, history):
+        if not message or not message.get("text"):
+            yield history + [{"role": "assistant", "content": "请输入问题"}]
+            return
+        files = message.get("files", [])
+        img_path = files[0] if files else None
+        text = message["text"]
+        if img_path:
+            history = history + [{"role": "user", "content": {"path": img_path}}, {"role": "user", "content": text}]
+        else:
+            history = history + [{"role": "user", "content": text}]
+        response = ''
+        for chunk in chat(text, img_path):
+            response += chunk
+            yield history + [{"role": "assistant", "content": response}]
 
+    with gr.Blocks(title="minimind-3v", css="#chatbox img{max-width:120px!important;max-height:120px!important;border-radius:8px} div.full-container{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important} div.full-container>.thumbnails{flex-shrink:0!important;max-width:50px!important} div.full-container>.input-container{flex:1!important} .input-wrapper{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important} .input-wrapper>.thumbnails{flex-shrink:0!important;max-width:50px!important} .input-wrapper>.input-row{flex:1!important} .thumbnail-image{max-width:40px!important;max-height:40px!important} textarea{overflow-y:hidden!important}") as demo:
+        gr.HTML('<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:-8px 0 -6px 0"><div style="display:flex;align-items:center;justify-content:center;gap:8px"><img src="https://www.modelscope.cn/api/v1/studio/gongjy/MiniMind/repo?Revision=master&FilePath=images%2Flogo2.png&View=true" style="height:30px"><span style="font-size:1.5rem;font-weight:bold;font-style:italic">minimind-3v</span></div><div style="color:#bbb;font-style:italic;margin:0">AI-generated content may be inaccurate, please verify</div></div>')
+        try:
+            chatbot = gr.Chatbot(label="", height=520, elem_id="chatbox", type="messages")
+        except TypeError:
+            chatbot = gr.Chatbot(label="", height=520, elem_id="chatbox")
+        msg = gr.MultimodalTextbox(placeholder="输入问题，点击📎上传图片", show_label=False, submit_btn="发送")
         with gr.Row():
-            with gr.Column(scale=3):
-                def get_current_image_path(image):
-                    global current_image_path
-                    if image is None:
-                        current_image_path = ''
-                        return
-                    current_image_path = image
-                    return current_image_path
+            model_dropdown = gr.Dropdown(choices=list(model_dict.keys()), value=current_model_name, show_label=False, scale=1)
+            status_text = gr.Textbox(value=f"已加载: {current_model_name}", show_label=False, interactive=False, scale=2)
 
-                with gr.Blocks() as iface:
-                    with gr.Row():
-                        image_input = gr.Image(type="filepath", label="选择图片", height=650)
-                    image_input.change(fn=get_current_image_path, inputs=image_input)
+        def on_model_change(name):
+            return load_vlm_model(model_dict[name])
 
-                def update_parameters(temperature_, top_p_):
-                    global temperature, top_p
-                    temperature = float(temperature_)
-                    top_p = float(top_p_)
-                    return temperature, top_p
-
-                with gr.Blocks() as iface_param:
-                    with gr.Row():
-                        temperature_slider = gr.Slider(label="Temperature", minimum=0.5, maximum=1.1, value=0.65)
-                        top_p_slider = gr.Slider(label="Top-P", minimum=0.7, maximum=0.95, value=0.85)
-
-                    temperature_slider.change(fn=update_parameters, inputs=[temperature_slider, top_p_slider])
-                    top_p_slider.change(fn=update_parameters, inputs=[temperature_slider, top_p_slider])
-
-            with gr.Column(scale=6):
-                def chat_with_vlm(message, history):
-                    if not message:
-                        yield history + [("错误", "错误：提问不能为空。")]
-                        return
-                    if not current_image_path:
-                        yield history + [("错误", "错误：图片不能为空。")]
-                        return
-
-                    image_html = f'<img src="gradio_api/file={current_image_path}" alt="Image" style="width:100px;height:auto;">'
-                    res_generator = chat(message, current_image_path)
-                    response = ''
-                    for res in res_generator:
-                        response += res
-                        yield history + [(f"{image_html} {message}", response)]
-
-                chatbot = gr.Chatbot(label="MiniMind-Vision", height=680)
-                with gr.Row():
-                    with gr.Column(scale=8):
-                        message_input = gr.Textbox(
-                            placeholder="请输入你的问题...",
-                            show_label=False,
-                            container=False
-                        )
-                    with gr.Column(scale=2, min_width=50):
-                        submit_button = gr.Button("发送")
-                submit_button.click(
-                    fn=chat_with_vlm,
-                    inputs=[message_input, chatbot],
-                    outputs=chatbot
-                )
-
-                # # 添加示例问题
-                # gr.Examples(
-                #     examples=["描述一下这个图片的内容。", "画面里面有什么？", "画面里的天气怎么样？"],
-                #     inputs=message_input)
-
+        model_dropdown.change(on_model_change, [model_dropdown], [status_text])
+        msg.submit(respond, [msg, chatbot], chatbot)
         demo.launch(server_name=server_name, server_port=server_port)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Chat with MiniMind")
-    parser.add_argument('--load_from', default='../model', type=str, help="模型加载路径（model=原生torch权重，其他路径=transformers格式）")
-    parser.add_argument('--save_dir', default='out', type=str, help="模型权重目录")
-    parser.add_argument('--weight', default='sft_vlm', type=str, help="权重名称前缀（pretrain_vlm, sft_vlm）")
-    parser.add_argument('--temperature', default=0.65, type=float, help="生成温度，控制随机性（0-1，越大越随机）")
-    parser.add_argument('--top_p', default=0.85, type=float, help="nucleus采样阈值（0-1）")
+    parser = argparse.ArgumentParser(description="Chat with MiniMind-V")
+    parser.add_argument('--load_from', default='./', type=str, help="transformers模型扫描目录")
+    parser.add_argument('--vision_model', default='../model/siglip2-base-p16-ve', type=str, help="视觉编码器路径")
+    parser.add_argument('--temperature', default=0.8, type=float, help="生成温度")
+    parser.add_argument('--top_p', default=0.9, type=float, help="nucleus采样阈值")
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str, help="运行设备")
-    parser.add_argument('--hidden_size', default=512, type=int, help="隐藏层维度（512=Small-26M, 768=Base-104M）")
-    parser.add_argument('--num_hidden_layers', default=8, type=int, help="隐藏层数量（Small=8, Base=16）")
     parser.add_argument('--max_seq_len', default=8192, type=int, help="最大序列长度")
-    parser.add_argument('--use_moe', default=0, type=int, choices=[0, 1], help="是否使用MoE架构（0=否，1=是）")
-    parser.add_argument('--stream', default=1, type=int, choices=[0, 1], help="是否使用流式输出（0=否，1=是）")
     args = parser.parse_args()
 
-    lm_config = VLMConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers,
-                          max_seq_len=args.max_seq_len, use_moe=bool(args.use_moe))
-    model, tokenizer, vision_model, preprocess = init_model(lm_config)
+    device = args.device
+    max_seq_len = args.max_seq_len
+    vision_model_path = args.vision_model
+    model_dict = scan_vlm_models(args.load_from)
+    if not model_dict:
+        print(f"未在 {os.path.abspath(args.load_from)} 找到transformers模型")
+        exit(1)
+    current_model_name = list(model_dict.keys())[0]
+    load_vlm_model(model_dict[current_model_name])
     launch_gradio_server(server_name="0.0.0.0", server_port=8888)

@@ -63,9 +63,7 @@ def setup_seed(seed: int):
     torch.backends.cudnn.benchmark = False
 
 
-def init_vlm_model(vlm_config, from_weight='pretrain_vlm', tokenizer_path='../model', 
-                   vision_model_path='../model/vision_model/clip-vit-base-patch16', 
-                   save_dir='../out', device='cuda', freeze_llm=False):
+def init_vlm_model(vlm_config, from_weight='pretrain_vlm', tokenizer_path='../model', vision_model_path='../model/siglip2-base-p16-ve', save_dir='../out', device='cuda', freeze_llm=0):
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     model = MiniMindVLM(vlm_config, vision_model_path=vision_model_path)
     
@@ -75,17 +73,22 @@ def init_vlm_model(vlm_config, from_weight='pretrain_vlm', tokenizer_path='../mo
         weights = torch.load(weight_path, map_location=device)
         model.load_state_dict(weights, strict=False)
     
-    # Pretrain阶段：冻结除 vision_proj 外的所有参数
-    if freeze_llm:
+    # 1、全部冻结，只打开vision_proj梯度
+    for name, param in model.named_parameters():
+        if 'vision_proj' not in name:
+            param.requires_grad = False
+
+    # 2、判断策略
+    if freeze_llm == 0:
         for name, param in model.named_parameters():
-            if 'vision_proj' not in name:
-                param.requires_grad = False
-    
-    # pretrain阶段：解冻最后1层
-    last_layer_idx = vlm_config.num_hidden_layers - 1
-    for name, param in model.model.named_parameters():
-        if f'layers.{last_layer_idx}.' in name:
-            param.requires_grad = True
+            if 'vision_model' not in name:
+                param.requires_grad = True
+    elif freeze_llm == 1:
+        for name, param in model.model.named_parameters():
+            if 'layers.0.' in name:
+                param.requires_grad = True
+    elif freeze_llm == 2:
+        pass
 
     get_model_params(model, vlm_config)
     Logger(f'Trainable Params: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f}M')
@@ -149,6 +152,17 @@ def vlm_checkpoint(vlm_config, weight='pretrain_vlm', model=None, optimizer=None
                 Logger(f'GPU数量变化({saved_ws}→{current_ws})，step已自动转换为{ckp_data["step"]}')
             return ckp_data
         return None
+
+
+def vlm_collate_fn(batch):
+    input_ids = torch.stack([b[0] for b in batch])
+    labels = torch.stack([b[1] for b in batch])
+    pixel_data = [b[2] for b in batch]
+    if hasattr(pixel_data[0], 'keys'):
+        pixel_values = {k: torch.stack([d[k] for d in pixel_data]) for k in pixel_data[0].keys()}
+    else:
+        pixel_values = torch.stack(pixel_data)
+    return input_ids, labels, pixel_values
 
 
 class SkipBatchSampler(Sampler):
