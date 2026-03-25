@@ -528,7 +528,7 @@
     <!-- Title Section -->
     <div class="title-section">
         <p class="tagline pixel-font">
-            Train a 26M Vision-Language Model from zero.<br/>
+            Train a 67M Vision-Language Model from zero.<br/>
             1 hour. ¥1.3. One 3090.<br/>
             See the World.
         </p>
@@ -537,7 +537,7 @@
     <!-- Key Stats -->
     <div class="stats-section">
         <div class="stat-box">
-            <h3>26M</h3>
+            <h3>67M</h3>
             <p>Parameters</p>
         </div>
         <div class="stat-box">
@@ -549,7 +549,7 @@
             <p>Cost</p>
         </div>
         <div class="stat-box">
-            <h3>1/7000</h3>
+            <h3>1/2600</h3>
             <p>vs GPT-3</p>
         </div>
     </div>
@@ -563,7 +563,7 @@
         </div>
         <div class="feature-card">
             <h3>📦 Complete VLM Stack</h3>
-            <p>Vision encoder → LLM → Projector → Pretrain → SFT</p>
+            <p>SigLIP2 encoder → LLM → Projector → Pretrain → SFT</p>
         </div>
         <div class="feature-card">
             <h3>💰 Ultra-Affordable</h3>
@@ -597,15 +597,27 @@
             </thead>
             <tbody>
                 <tr>
+                    <td><strong>minimind-3v-moe</strong></td>
+                    <td>202M-A67M</td>
+                    <td>1.0 GB</td>
+                    <td>2026.04.01</td>
+                </tr>
+                <tr>
+                    <td><strong>minimind-3v</strong></td>
+                    <td>67M</td>
+                    <td>0.5 GB</td>
+                    <td>2026.04.01</td>
+                </tr>
+                <tr>
                     <td><strong>MiniMind2-V</strong></td>
                     <td>104M</td>
-                    <td>0.6 GB</td>
+                    <td>1.1 GB</td>
                     <td>2025.02.20</td>
                 </tr>
                 <tr>
                     <td><strong>MiniMind2-Small-V</strong></td>
                     <td>26M</td>
-                    <td>1.1 GB</td>
+                    <td>0.6 GB</td>
                     <td>2025.02.20</td>
                 </tr>
             </tbody>
@@ -617,15 +629,33 @@
     <div class="changelog-section">
         <div class="changelog-item open">
             <div class="changelog-header open" onclick="toggleChangelog(this)">
-                <span>🎉 2025-10-24 (Latest)</span>
+                <span>🎉 2026-04-01 (Latest)</span>
                 <span class="toggle-icon">−</span>
             </div>
             <div class="changelog-content">
                 <ul>
-                    <li>Bug fix: Model weight mismatch issue resolved</li>
-                    <li>Adapted to minimind-1024 updates</li>
-                    <li>Code refactoring: Training and evaluation script standardization</li>
-                    <li>Added complete checkpoint resumption support</li>
+                    <li>Added minimind-3v (67M) and minimind-3v-moe (201M-A67M) models</li>
+                    <li>Unified 768+8 architecture, supporting both dense and moe modes</li>
+                    <li>Switched Visual Encoder from CLIP to SigLIP2 (siglip2-base-p16-ve)</li>
+                    <li>Replaced QFormer with MLP Projection + reshape compression</li>
+                    <li>Dataset format updated to parquet, mixed data sources, updated tokenizer with image placeholder &lt;|image_pad|&gt;, new WebUI with dynamic model directory scanning and dropdown model switching</li>
+                    <li>Model code refactored, LLM/VLM unified for Transformers format</li>
+                    <li>Training scripts support DDP multi-GPU, bfloat16 mixed precision, torch.compile acceleration</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="changelog-item">
+            <div class="changelog-header" onclick="toggleChangelog(this)">
+                <span>🛠️ 2025-10-24</span>
+                <span class="toggle-icon">+</span>
+            </div>
+            <div class="changelog-content">
+                <ul>
+                    <li>Bug fix: mismatched model weights</li>
+                    <li>Adapted to the latest minimind updates</li>
+                    <li>Refactored training and evaluation scripts</li>
+                    <li>Added complete checkpoint resume support</li>
                 </ul>
             </div>
         </div>
@@ -678,9 +708,9 @@
     <div class="section-header pixel-font">🎮 Inside MiniMind-V</div>
     <div align="center">
         <div class="visuals-container">
-            <img src="./images/minimind2-v.gif" alt="MiniMind-V Demo">
-            <img src="./images/VLM-structure.png" alt="VLM Structure">
-            <img src="./images/VLM-structure-moe.png" alt="VLM Structure MOE">
+            <img src="./images/minimind-3v.gif" alt="MiniMind-V Demo">
+            <img src="./images/VLM-structure.jpg" alt="VLM Structure">
+            <img src="./images/VLM-structure-moe.jpg" alt="VLM Structure MOE">
         </div>
     </div>
 
@@ -706,7 +736,7 @@
             <a href="https://github.com/jingyaogong/minimind-v" class="pixel-button">
                 GitHub Repo
             </a>
-            <a href="https://huggingface.co/collections/jingyaogong/minimind-66caf8d999f5c7fa64f399e5" class="pixel-button">
+            <a href="https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d" class="pixel-button">
                 🤗 HuggingFace
             </a>
             <a href="https://www.modelscope.cn/profile/gongjy" class="pixel-button">
