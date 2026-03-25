@@ -7,9 +7,9 @@
 
 ## 📌 Introduction
 
-MiniMind-V is a super-small multimodal vision-language model project trained completely from scratch, requiring **only 1.3 RMB + 1 hour** to train a **26M** parameter vision-language model!
+MiniMind-V is a super-small multimodal vision-language model project trained completely from scratch, requiring **only 1.3 RMB + 1 hour** to train a **67M** parameter vision-language model!
 
-- **MiniMind-V** series is extremely lightweight, the smallest version is **1/7000** the size of GPT-3
+- **MiniMind-V** series is extremely lightweight, the smallest version is **1/2600** the size of GPT-3
 - **MiniMind-V** is an extension of the visual capabilities of the [MiniMind](https://github.com/jingyaogong/minimind) pure language model
 - The project open-sources the minimalist structure of VLM models, including:
   - Dataset cleaning
@@ -33,8 +33,10 @@ MiniMind-V is a super-small multimodal vision-language model project trained com
 
 | Model (Size)            | Inference Memory (Approx.) | Release    |
 |------------------------|----------------------------|------------|
-| MiniMind2-V (104M)     | 0.6 GB                     | 2025.02.20 |
-| MiniMind2-Small-V (26M) | 1.1 GB                    | 2025.02.20 |
+| minimind-3v-moe (201M-A67M) | 1.0 GB                | 2026.04.01 |
+| minimind-3v (67M)      | 0.5 GB                     | 2026.04.01 |
+| MiniMind2-V (104M)     | 1.1 GB                     | 2025.02.20 |
+| MiniMind2-Small-V (26M) | 0.6 GB                    | 2025.02.20 |
 | minimind-v-v1-small (27M) | 0.6 GB                  | 2024.10.04 |
 | minimind-v-v1 (109M)   | 1.1 GB                     | 2024.10.04 |
 
@@ -59,7 +61,7 @@ Is it really as complex as imagined to build a VLM-based multimodal large model?
 Now, let's explore the answers and feel the joy of creation together!
 
 <figure markdown>
-  ![minimind2-v](images/minimind2-v.gif)
+  ![minimind-3v](images/minimind-3v.gif)
 </figure>
 
 ## 📚 Core Concepts
@@ -68,15 +70,15 @@ Now, let's explore the answers and feel the joy of creation together!
 
 A Vision-Language Model is a multimodal model that can understand both images and text simultaneously. MiniMind-V achieves this through:
 
-1. Using a **Visual Encoder** (CLIP model) to convert images into feature vectors
-2. Aligning visual and text feature spaces through a **Projection layer**
+1. Using a **Visual Encoder** (SigLIP2 model) to convert images into feature vectors
+2. Aligning visual and text feature spaces through a **Projection layer** (reshape + MLP)
 3. Injecting image features into the language model to enable image-text understanding
 
 ### MiniMind-V Design Philosophy
 
 - **Minimal modifications**: Based on the MiniMind language model, only adding Visual Encoder and Projection submodules
 - **Core algorithm changes < 50 lines**: Extremely low migration difficulty
-- **Simple yet effective**: Uses linear projection for cross-modal alignment, simple but effective
+- **Simple yet effective**: Uses MLP Projection + reshape compression for cross-modal alignment, simple but effective
 
 ## 🎓 Target Audience
 

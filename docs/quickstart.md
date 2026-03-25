@@ -28,10 +28,10 @@ cd minimind-v
 ```
 
 ```bash
-# Download CLIP model to ./model/vision_model directory
-git clone https://huggingface.co/openai/clip-vit-base-patch16
+# Download SigLIP2 model to ./model directory
+git clone https://huggingface.co/jingyaogong/siglip2-base-p16-ve
 # or
-git clone https://www.modelscope.cn/models/openai-mirror/clip-vit-base-patch16
+git clone https://modelscope.cn/models/gongjy/siglip2-base-p16-ve
 ```
 
 ### Step 1: Install Dependencies
@@ -54,10 +54,10 @@ Download pretrained models from HuggingFace or ModelScope:
 
 ```bash
 # From HuggingFace
-git clone https://huggingface.co/jingyaogong/MiniMind2-V
+git clone https://huggingface.co/jingyaogong/minimind-3v
 
 # Or from ModelScope
-git clone https://www.modelscope.cn/models/gongjy/MiniMind2-V.git
+git clone https://www.modelscope.cn/models/gongjy/minimind-3v.git
 ```
 
 ### Step 3: Command Line Q&A
@@ -67,43 +67,42 @@ git clone https://www.modelscope.cn/models/gongjy/MiniMind2-V.git
 python eval_vlm.py --load_from model --weight sft_vlm
 
 # Or use transformers format model
-python eval_vlm.py --load_from MiniMind2-V
+python eval_vlm.py --load_from minimind-3v
 ```
 
 ### Step 4: Start WebUI (Optional)
 
 ```bash
-python scripts/web_demo_vlm.py
+# ⚠️ You must first copy the transformers model folder to the ./scripts/ directory
+# (e.g.: cp -r minimind-3v ./scripts/minimind-3v)
+# The web_demo_vlm script will automatically scan subdirectories containing weight files
+cd scripts && python web_demo_vlm.py
 ```
-
-Visit `http://localhost:8501` to use the web interface for image-text dialogue.
 
 ## 📝 Effect Testing
 
 ### Single Image Dialogue Examples
 
-**Test Image 1: City Street Scene**
+**Test Image 1: Pizza**
 
 ```text
 Q: Describe the content of this image
-A: The image shows a busy city street with tall buildings on both sides of a long road. 
-   The street is packed with cars, trucks, and buses, along with many other vehicles...
+A: The image depicts a delicious pizza with fresh toppings on a wooden board...
 ```
 
-**Test Image 2: Panda**
+**Test Image 2: Snow Mountain**
 
 ```text
-Q: What animal is in this image?
-A: The image shows a white brown bear sitting on the grass, next to a large bear with brown spots. 
-   This bear seems shy or playful as it lies on the grass, resting...
+Q: Describe the content of this image
+A: The image shows a beautiful snow-capped mountain reflected in a calm lake...
 ```
 
 ### Model Performance
 
 | Model | Parameters | Inference Speed | Image Understanding |
 |-------|-----------|-----------------|---------------------|
-| MiniMind2-V | 104M | Fast | 😊😊😊😊😊😊 |
-| MiniMind2-Small-V | 26M | Very Fast | 😊😊😊😊 |
+| minimind-3v-moe | 201M-A67M | Fast | 😊😊😊😊😊😊 |
+| minimind-3v | 67M | Very Fast | 😊😊😊😊😊 |
 
 ## 🔧 Loading from PyTorch Weights
 
@@ -113,12 +112,12 @@ If you want to use native PyTorch model weights (`*.pth` files):
 
 Download the required weight files from:
 
-- [HuggingFace - MiniMind2-V-PyTorch](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch)
-- [ModelScope - MiniMind2-V-PyTorch](https://www.modelscope.cn/models/gongjy/MiniMind2-V-PyTorch)
+- [HuggingFace - minimind-3v-pytorch](https://huggingface.co/jingyaogong/minimind-3v-pytorch)
+- [ModelScope - minimind-3v-pytorch](https://www.modelscope.cn/models/gongjy/minimind-3v-pytorch)
 
 Files needed:
-- `sft_vlm_512.pth` or `sft_vlm_768.pth` (SFT model weights)
-- Optional: `pretrain_vlm_512.pth` or `pretrain_vlm_768.pth` (pretrained model weights)
+- `sft_vlm_768.pth` or `sft_vlm_768_moe.pth` (SFT model weights)
+- Optional: `pretrain_vlm_768.pth` or `pretrain_vlm_768_moe.pth` (pretrained model weights)
 
 ### Run Testing
 
@@ -134,17 +133,17 @@ python eval_vlm.py --weight pretrain_vlm
 
 MiniMind-V adds Visual Encoder and Projection layers on top of the MiniMind language model:
 
-![VLM-structure](images/VLM-structure.png)
+![VLM-structure](images/VLM-structure.jpg)
 
 ### Core Components
 
-1. **Visual Encoder (CLIP)**
-   - Uses `clip-vit-base-patch16` model
-   - Input image size: 224×224
-   - Output: 196×768 dimensional visual tokens
+1. **Visual Encoder (SigLIP2)**
+   - Uses `siglip2-base-p16-ve` model
+   - Based on SigLIP2 NaFlex processor
+   - Output: up to 256×768 dimensional visual tokens
 
 2. **Projection Layer**
-   - Simple linear transformation
+   - Reshape (concat 4 adjacent tokens: 256×768 → 64×3072) + 2-layer MLP to 64 visual tokens
    - Aligns visual tokens to text embedding space
 
 3. **Language Model (MiniMind)**
@@ -153,10 +152,10 @@ MiniMind-V adds Visual Encoder and Projection layers on top of the MiniMind lang
 
 ### Model Parameter Configuration
 
-| Model Name | Params | d_model | n_layers | kv_heads | q_heads |
-|-----------|--------|---------|----------|----------|---------|
-| MiniMind2-Small-V | 26M | 512 | 8 | 2 | 8 |
-| MiniMind2-V | 104M | 768 | 16 | 2 | 8 |
+| Model Name | Params | d_model | n_layers | kv_heads | q_heads | MoE |
+|-----------|--------|---------|----------|----------|---------|-----|
+| minimind-3v | 67M | 768 | 8 | 4 | 8 | No |
+| minimind-3v-moe | 201M-A67M | 768 | 8 | 4 | 8 | Yes |
 
 ## 🎯 Next Steps
 
@@ -169,13 +168,13 @@ MiniMind-V adds Visual Encoder and Projection layers on top of the MiniMind lang
 ### 1. Model fails to load?
 
 Ensure all dependency files are downloaded:
-- CLIP model weights
+- SigLIP2 model weights
 - MiniMind-V model weights
 - tokenizer configuration files
 
 ### 2. Out of memory?
 
-- Use the 26M Small version
+- Use the 67M dense version
 - Reduce batch size
 - Use CPU inference (slower)
 

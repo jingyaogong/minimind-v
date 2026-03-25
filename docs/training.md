@@ -15,76 +15,46 @@ Create `./dataset` directory and place data files:
 
 ```bash
 ./dataset/
-├── pretrain_vlm_data.jsonl        # Pretrain data (~595K samples)
-├── sft_vlm_data.jsonl             # Single-image SFT data (~300K samples)
-├── sft_vlm_data_multi.jsonl       # Multi-image SFT data (~13.6K samples)
+├── pretrain_i2t.parquet           # Pretrain data (~1.13M samples)
+├── sft_i2t.parquet                # SFT data (~580K samples: ~236K i2t + ~346K t2t)
 ├── eval_images/                   # Test images
-│   ├── 城市车水马龙-city-traffic.jpg
-│   ├── 熊猫草地-Panda-Grassland.jpg
+│   ├── pizza-on-wooden-board.jpg
+│   ├── snow-mountain-lake-view.jpg
 │   └── ...
-└── sft_multi_images_trans_image.zip  # Multi-image data images (needs extraction)
 ```
 
 !!! tip "Dataset Notes"
-    - `*.jsonl` are Q&A datasets
-    - `*images` are accompanying image data, need to be extracted after download
-    - Please reserve about 5GB space for the dataset
+    - `*.parquet` files contain conversations, image_bytes, and image_names columns
+    - All images are embedded in the parquet files, no separate extraction needed
+    - Please reserve about 2GB space for the dataset
     - If space is insufficient, try skipping pretrain and go directly to SFT training
 
 ### 2. Data Format
 
-**Pretrain Data Format** (`pretrain_vlm_data.jsonl`):
+**Pretrain Data Format** (`pretrain_i2t.parquet`):
 
-```json
-{
-  "conversations": [
-    {
-      "role": "user",
-      "content": "Provide a brief description of the given image.\n<image>"
-    },
-    {
-      "role": "assistant",
-      "content": "Olive oil is a healthy ingredient for free use."
-    }
-  ],
-  "image": "GCC_train_002582585.jpg"
-}
+```text
+Columns: conversations (json string), image_bytes (binary), image_names (string)
+
+conversations example:
+[
+  {"role": "user", "content": "Provide a brief description of the given image.\n<image>"},
+  {"role": "assistant", "content": "Olive oil is a healthy ingredient for free use."}
+]
+image_bytes: <binary image data>
 ```
 
-**Single-Image SFT Data Format** (`sft_vlm_data.jsonl`):
+**Single-Image SFT Data Format** (`sft_i2t.parquet`):
 
-```json
-{
-  "conversations": [
-    {
-      "role": "user",
-      "content": "What impact does the location of the alarm clock have on sleep quality?<image>"
-    },
-    {
-      "role": "assistant",
-      "content": "Place the digital alarm clock on the nightstand..."
-    }
-  ],
-  "image": "train-00000-of-00001_image_0_0.jpg"
-}
-```
+```text
+Columns: conversations (json string), image_bytes (binary), image_names (string)
 
-**Multi-Image SFT Data Format** (`sft_vlm_data_multi.jsonl`):
-
-```json
-{
-  "conversations": [
-    {
-      "role": "user",
-      "content": "context: Source Image: <image> Target Image: <image> Instruction: What is the correct image edit instruction?<image>"
-    },
-    {
-      "role": "assistant",
-      "content": "take the people out of the back in the photo..."
-    }
-  ],
-  "image": "0.jpg, 1.jpg"
-}
+conversations example:
+[
+  {"role": "user", "content": "What impact does the location of the alarm clock have on sleep quality?<image>"},
+  {"role": "assistant", "content": "Place the digital alarm clock on the nightstand..."}
+]
+image_bytes: <binary image data>
 ```
 
 ### 3. Data Source
@@ -92,9 +62,9 @@ Create `./dataset` directory and place data files:
 - **Pretrain Data**: [Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions)
   - Approximately 570,000 images from CC-3M and COCO 2014
   
-- **SFT Data**: [llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k)
-  - 300K instruction fine-tuning data
-  - 150K images
+- **SFT Data**: [llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k) + [LLaVA-SFT-665K](https://huggingface.co/datasets/csuhan/LLaVA-SFT-665K)
+  - 300K + 665K instruction fine-tuning data
+  - Contains both Chinese and English data
   - Translated content, better Chinese support
 
 ## 🎯 Training Pipeline
@@ -106,11 +76,8 @@ All training scripts are located in the `./trainer` directory.
 Download pure language model weights to the `./out` directory (as the base language model for training VLM):
 
 ```bash
-# Download 512-dim model
-wget https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_512.pth
-
-# Or download 768-dim model
-wget https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch/blob/main/llm_768.pth
+# Download 768-dim model
+wget https://huggingface.co/jingyaogong/minimind-3v-pytorch/blob/main/llm_768.pth
 ```
 
 ### Step 1: Pretraining (Learning Image Description)
@@ -128,26 +95,26 @@ torchrun --nproc_per_node 2 trainer/train_pretrain_vlm.py --epochs 4 --from_weig
 python trainer/train_pretrain_vlm.py --epochs 4 --from_resume 1
 ```
 
-**Output weights**: `./out/pretrain_vlm_*.pth` (* is the model dimension, default is 512)
+**Output weights**: `./out/pretrain_vlm_*.pth` (* is the model dimension, default is 768)
 
 !!! info "Training Duration"
-    - MiniMind2-Small-V (26M): ~1h (single 3090)
-    - MiniMind2-V (104M): ~3h (single 3090)
+    - minimind-3v (67M): ~1h (single 3090)
+    - minimind-3v-moe (201M-A67M): ~3h (single 3090)
 
 **Training Strategy**:
-- Freeze Visual Encoder (CLIP model) gradients
-- Freeze LLM main parameters (only last layer learnable via `--freeze_llm True`)
+- Freeze Visual Encoder (SigLIP2 model) gradients
+- Freeze LLM main parameters (only layer 0 learnable via `--freeze_llm 1`)
 - Only train Vision Projection layer
 
 **Key Parameters**:
 - `--from_weight llm`: Start from LLM weights
-- `--freeze_llm True`: Freeze LLM parameters (pretrain only)
+- `--freeze_llm 1`: Freeze LLM parameters, unfreeze layer 0 (pretrain only)
 - `--from_resume 1`: Resume from checkpoint
 - `--save_weight pretrain_vlm`: Save weight prefix name
 
 **Loss Curve**:
 
-![Pretrain Loss](images/pretrain_loss.png)
+![Pretrain Loss](images/pretrain_loss.jpg)
 
 ### Step 2: Supervised Fine-Tuning (Learning Image-Caption Dialogue Style)
 
@@ -167,11 +134,11 @@ python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
 **Output weights**: `./out/sft_vlm_*.pth`
 
 !!! info "Training Duration"
-    - MiniMind2-Small-V: ~1h (single 3090)
-    - MiniMind2-V: ~3h (single 3090)
+    - minimind-3v (67M): ~1h (single 3090)
+    - minimind-3v-moe (201M-A67M): ~3h (single 3090)
 
 **Training Strategy**:
-- Freeze Visual Encoder (CLIP model) gradients
+- Freeze Visual Encoder (SigLIP2 model) gradients
 - Train Vision Projection layer (all parameters learnable)
 - Train LLM (all parameters learnable)
 
@@ -182,7 +149,7 @@ python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
 
 **Loss Curve**:
 
-![SFT Loss](images/sft_loss.png)
+![SFT Loss](images/sft_loss.jpg)
 
 ### Step 3 (Optional): Multi-Image Fine-Tuning
 
@@ -215,23 +182,20 @@ python train_sft_vlm.py --epochs 4 --use_multi_image
 
 MiniMind-V's structure only adds Visual Encoder and feature projection submodules:
 
-![VLM Structure](images/VLM-structure.png)
+![VLM Structure](images/VLM-structure.jpg)
 
 ### Core Components
 
 1. **Visual Encoder**
-   - Uses [clip-vit-base-patch16](https://huggingface.co/openai/clip-vit-base-patch16)
+   - Uses [siglip2-base-p16-ve](https://huggingface.co/jingyaogong/siglip2-base-p16-ve)
    - Based on ViT-B/16 architecture
-   - Input image: 224×224
    - Patch size: 16×16
-   - Output: 196×768 dimensional features (196 visual tokens)
+   - Output: up to 256×768 dimensional features
 
 2. **Projection Layer**
-   - Simple unbiased linear transformation
-   - Functions:
-     - Aligns 768-dimensional visual tokens to LLM text tokens
-     - Maps image features to the same space as text embeddings
-   - Achieves cross-modal feature alignment
+   - Reshape: concat 4 adjacent tokens (256×768 → 64×3072)
+   - 2-layer MLP (Linear→GELU→Linear): project to LLM hidden dimension
+   - Result: 64 visual tokens aligned to text embedding space
 
 3. **Language Model**
    - Fully inherits from MiniMind
@@ -241,15 +205,15 @@ MiniMind-V's structure only adds Visual Encoder and feature projection submodule
 
 **Input Format**:
 
-In `minimind-v`, a 196-character `@@@...@@@` placeholder is used to replace the image:
+In `minimind-v`, 64 `<|image_pad|>` tokens are used as placeholders to replace the image:
 
 ```text
-@@@......@@@\nWhat is this image describing?
+<|image_pad|><|image_pad|>...<|image_pad|>(×64)\nWhat is this image describing?
 ```
 
-Why 196 characters? Because any image is encoded by the CLIP model as 196×768 dimensional tokens.
+Why 64 tokens? Because 256 SigLIP2 patch features are compressed to 64 tokens via reshape (concat 4 adjacent tokens) + MLP projection.
 
-![Input Mechanism](images/minimind-v-input.png)
+![Input Mechanism](images/minimind-v-input.jpg)
 
 **Multi-Image Implementation**:
 
@@ -259,8 +223,8 @@ Achieved by injecting multiple `<image>` placeholders, no framework modification
 
 | Model Name | Params | d_model | n_layers | kv_heads | q_heads | Visual Token |
 |-----------|--------|---------|----------|----------|---------|--------------|
-| MiniMind2-Small-V | 26M | 512 | 8 | 2 | 8 | 196×768 |
-| MiniMind2-V | 104M | 768 | 16 | 2 | 8 | 196×768 |
+| minimind-3v | 67M | 768 | 8 | 4 | 8 | 64×768 |
+| minimind-3v-moe | 201M-A67M | 768 | 8 | 4 | 8 | 64×768 |
 
 ## 🧪 Test Model
 
@@ -283,8 +247,8 @@ python eval_vlm.py --weight sft_vlm --image_dir ./dataset/eval_images/
 
 You can also directly download and use pre-trained `*.pth` files:
 
-- [HuggingFace - MiniMind2-V-PyTorch](https://huggingface.co/jingyaogong/MiniMind2-V-PyTorch)
-- [ModelScope - MiniMind2-V-PyTorch](https://www.modelscope.cn/models/gongjy/MiniMind2-V-PyTorch)
+- [HuggingFace - minimind-3v-pytorch](https://huggingface.co/jingyaogong/minimind-3v-pytorch)
+- [ModelScope - minimind-3v-pytorch](https://www.modelscope.cn/models/gongjy/minimind-3v-pytorch)
 
 ## 🔧 Multi-GPU Training
 
@@ -331,20 +295,20 @@ Based on single NVIDIA 3090:
 ### 1. Reduce Memory Usage
 
 - Use smaller batch size
-- Use 512-dim model instead of 768
+- Use the dense model instead of moe
 - Enable gradient checkpointing (if implemented)
 - Use DeepSpeed ZeRO optimization
 
 ### 2. Accelerate Training
 
 - Use multi-GPU training (DDP or DeepSpeed)
-- Use mixed precision training (FP16)
+- Use mixed precision training (bfloat16)
 - Reduce image resolution (but may affect performance)
 
 ### 3. Improve Performance
 
 - Increase training epochs
-- Use larger model (768 vs 512)
+- Use moe model for better performance
 - Use higher quality datasets
 - Adjust learning rate
 
@@ -380,9 +344,9 @@ Pretraining teaches the model basic image description capabilities, establishing
 
 SFT teaches the model real dialogue formats, making its outputs more aligned with human communication habits rather than simple image descriptions.
 
-### Why Freeze CLIP?
+### Why Freeze SigLIP2?
 
-CLIP is already a powerful pre-trained visual encoder. Freezing its parameters can:
+SigLIP2 is already a powerful pre-trained visual encoder. Freezing its parameters can:
 - Significantly reduce trainable parameters
 - Speed up training
 - Prevent overfitting
@@ -391,24 +355,24 @@ CLIP is already a powerful pre-trained visual encoder. Freezing its parameters c
 ### Future Improvement Directions
 
 ```text
-> More complex Projection layers (e.g., Cross-Attention) may bring better cross-modal alignment
-> Use larger CLIP models (e.g., large series) for finer-grained image features
-> Increase image resolution (currently only 224×224, dataset uses 128×128)
+> Use larger SigLIP2 models for finer-grained image features
+> Further explore dynamic resolution enabled by NaFlex
 > Expand multi-image datasets to support more complex multi-image understanding scenarios
+> Explore more advanced Projection designs for better cross-modal alignment
 ```
 
 ## 📚 Related Resources
 
 - **Base Language Model**: [MiniMind](https://github.com/jingyaogong/minimind)
 - **Reference Paper**: [LlaVA](https://arxiv.org/pdf/2304.08485)
-- **Visual Encoder**: [CLIP](https://huggingface.co/openai/clip-vit-base-patch16)
+- **Visual Encoder**: [SigLIP2](https://huggingface.co/jingyaogong/siglip2-base-p16-ve)
 
 ## ❓ Common Issues
 
 ### 1. Out of memory during training?
 
 - Reduce batch_size
-- Use 512-dim model
+- Use the dense model
 - Use DeepSpeed ZeRO
 - Single-GPU training instead of multi-GPU
 
@@ -427,7 +391,7 @@ CLIP is already a powerful pre-trained visual encoder. Freezing its parameters c
 
 ### 4. How to use custom dataset?
 
-Prepare jsonl files and corresponding images according to the data format above, and modify the data path in the training script.
+Prepare parquet files according to the data format above, and modify the data path in the training script.
 
 ## 🎯 Next Steps
 
