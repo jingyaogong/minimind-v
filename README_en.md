@@ -50,7 +50,7 @@
 
 <div align="center">
 
-![minimind2-v](./images/minimind-3v.gif)
+![minimind-3v](./images/minimind-3v.gif)
 
 [🔗🤖 Online Experience](https://www.modelscope.cn/studios/gongjy/MiniMind-V) | [🔗🎞️ Video Introduction](https://www.bilibili.com/video/BV1Sh1vYBEzY)
 
