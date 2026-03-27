@@ -40,7 +40,7 @@ def load_vlm_model(model_path):
     if model.vision_encoder is None: raise FileNotFoundError(f"视觉编码器未找到: {vision_model_path}")
     preprocess = model.processor
     lm_config = model.config
-    model = model.eval().to(device)
+    model = model.half().eval().to(device)
     model.vision_encoder = model.vision_encoder.to(device)
     current_model_name = os.path.basename(model_path)
     param_str = f'{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M'

@@ -26,7 +26,7 @@ def init_model(args):
         model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("./model/siglip2-base-p16-ve")
     get_model_params(model, model.config)
     preprocess = model.processor
-    return model.eval().to(args.device), tokenizer, preprocess
+    return model.half().eval().to(args.device), tokenizer, preprocess
 
 
 def main():
