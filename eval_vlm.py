@@ -63,8 +63,7 @@ def main():
             inputs = tokenizer(inputs_text, return_tensors="pt", truncation=True).to(args.device)
             
             print(f'[图像]: {image_file}')
-            display_prompt = prompt.replace('\n', '\\n')
-            print(f'💬: {display_prompt}')
+            print(f"💬: {repr(prompt)}")
             print('🤖: ', end='')
             st = time.time()
             generated_ids = model.generate(
