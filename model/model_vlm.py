@@ -115,18 +115,11 @@ class MiniMindVLM(MiniMindForCausalLM):
             if hasattr(pixel_values, 'keys'):
                 img_emb = MiniMindVLM.get_image_embeddings(pixel_values, self.vision_encoder)
                 vision_tensors = self.vision_proj(img_emb)
-
             else:
                 if len(pixel_values.shape) == 6:
                     pixel_values = pixel_values.squeeze(2)
                 bs, num, c, im_h, im_w = pixel_values.shape
-
-                # 每次取整个 batch 的第 i 张图，经过 vision encoder + projector 后得到 [B, target_tokens, hidden_size]
-                # 再统一在图片维（dim=1）上堆叠，使 vision_tensors 始终为 [B, N, target_tokens, hidden_size]
-                # 这样可与后续 count_vision_proj 中的 vf[b][k]、vf.size(1) 保持一致
-                vision_tensors = torch.stack(
-                    [self.vision_proj(MiniMindVLM.get_image_embeddings(pixel_values[:, i, :, :, :], self.vision_encoder))
-                        for i in range(num)],dim=1)
+                vision_tensors = torch.stack([self.vision_proj(MiniMindVLM.get_image_embeddings(pixel_values[:, i, :, :, :], self.vision_encoder)) for i in range(num)], dim=1)
             hidden_states = self.count_vision_proj(tokens=input_ids, h=hidden_states, vision_tensors=vision_tensors, seqlen=input_ids.shape[1])
 
         position_embeddings = (
