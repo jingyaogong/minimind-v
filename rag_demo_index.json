@@ -1,0 +1,55 @@
+{
+  "metadata": [
+    {
+      "id": "\u821e\u8e48-dance",
+      "filename": "\u821e\u8e48-dance.jpg",
+      "path": "/workspace/minimind-v/minimind-v/dataset/eval_images/\u821e\u8e48-dance.jpg",
+      "description": "Image: \u821e\u8e48-dance.jpg"
+    },
+    {
+      "id": "\u81ea\u884c\u8f66\u9c9c\u82b1-Bicycle-Flowers",
+      "filename": "\u81ea\u884c\u8f66\u9c9c\u82b1-Bicycle-Flowers.jpg",
+      "path": "/workspace/minimind-v/minimind-v/dataset/eval_images/\u81ea\u884c\u8f66\u9c9c\u82b1-Bicycle-Flowers.jpg",
+      "description": "Image: \u81ea\u884c\u8f66\u9c9c\u82b1-Bicycle-Flowers.jpg"
+    },
+    {
+      "id": "\u718a\u732b\u8349\u5730-Panda-Grassland",
+      "filename": "\u718a\u732b\u8349\u5730-Panda-Grassland.jpg",
+      "path": "/workspace/minimind-v/minimind-v/dataset/eval_images/\u718a\u732b\u8349\u5730-Panda-Grassland.jpg",
+      "description": "Image: \u718a\u732b\u8349\u5730-Panda-Grassland.jpg"
+    },
+    {
+      "id": "\u6905\u5b50\u8001\u4eba\u770b\u4e66-Chair-Elderly-Reading",
+      "filename": "\u6905\u5b50\u8001\u4eba\u770b\u4e66-Chair-Elderly-Reading.jpg",
+      "path": "/workspace/minimind-v/minimind-v/dataset/eval_images/\u6905\u5b50\u8001\u4eba\u770b\u4e66-Chair-Elderly-Reading.jpg",
+      "description": "Image: \u6905\u5b50\u8001\u4eba\u770b\u4e66-Chair-Elderly-Reading.jpg"
+    },
+    {
+      "id": "\u5f69\u8679\u7011\u5e03-Rainbow-Falls",
+      "filename": "\u5f69\u8679\u7011\u5e03-Rainbow-Falls.jpg",
+      "path": "/workspace/minimind-v/minimind-v/dataset/eval_images/\u5f69\u8679\u7011\u5e03-Rainbow-Falls.jpg",
+      "description": "Image: \u5f69\u8679\u7011\u5e03-Rainbow-Falls.jpg"
+    },
+    {
+      "id": "\u5c0f\u72d7\u7f8e\u5973\u6d77\u8fb9-Dog-Woman-Sea",
+      "filename": "\u5c0f\u72d7\u7f8e\u5973\u6d77\u8fb9-Dog-Woman-Sea.jpg",
+      "path": "/workspace/minimind-v/minimind-v/dataset/eval_images/\u5c0f\u72d7\u7f8e\u5973\u6d77\u8fb9-Dog-Woman-Sea.jpg",
+      "description": "Image: \u5c0f\u72d7\u7f8e\u5973\u6d77\u8fb9-Dog-Woman-Sea.jpg"
+    },
+    {
+      "id": "\u592a\u7a7a\u5b87\u822a\u5458-Astronaut-Space",
+      "filename": "\u592a\u7a7a\u5b87\u822a\u5458-Astronaut-Space.jpg",
+      "path": "/workspace/minimind-v/minimind-v/dataset/eval_images/\u592a\u7a7a\u5b87\u822a\u5458-Astronaut-Space.jpg",
+      "description": "Image: \u592a\u7a7a\u5b87\u822a\u5458-Astronaut-Space.jpg"
+    },
+    {
+      "id": "\u57ce\u5e02\u8f66\u6c34\u9a6c\u9f99-city-traffic",
+      "filename": "\u57ce\u5e02\u8f66\u6c34\u9a6c\u9f99-city-traffic.jpg",
+      "path": "/workspace/minimind-v/minimind-v/dataset/eval_images/\u57ce\u5e02\u8f66\u6c34\u9a6c\u9f99-city-traffic.jpg",
+      "description": "Image: \u57ce\u5e02\u8f66\u6c34\u9a6c\u9f99-city-traffic.jpg"
+    }
+  ],
+  "dimension": 768,
+  "metric": "L2",
+  "count": 8
+}
