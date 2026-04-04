@@ -81,7 +81,7 @@ def init_vlm_model(vlm_config, from_weight='pretrain_vlm', tokenizer_path='../mo
     # 2、判断策略
     if freeze_llm == 0:
         for name, param in model.named_parameters():
-            if 'vision_model' not in name:
+            if 'vision_encoder' not in name:
                 param.requires_grad = True
     elif freeze_llm == 1:
         for name, param in model.model.named_parameters():

@@ -113,8 +113,12 @@ class MiniMindVLM(MiniMindForCausalLM):
 
         if pixel_values is not None and start_pos == 0:
             if hasattr(pixel_values, 'keys'):
-                img_emb = MiniMindVLM.get_image_embeddings(pixel_values, self.vision_encoder)
-                vision_tensors = self.vision_proj(img_emb)
+                sample_val = next(iter(pixel_values.values()))
+                if sample_val.ndim == 5:
+                    bs, num = sample_val.shape[:2]
+                    vision_tensors = self.vision_proj(MiniMindVLM.get_image_embeddings({k: v.flatten(0, 1) for k, v in pixel_values.items()}, self.vision_encoder)).view(bs, num, self.config.image_token_len, -1)
+                else:
+                    vision_tensors = self.vision_proj(MiniMindVLM.get_image_embeddings(pixel_values, self.vision_encoder))
             else:
                 if len(pixel_values.shape) == 6:
                     pixel_values = pixel_values.squeeze(2)
@@ -153,3 +157,12 @@ class MiniMindVLM(MiniMindForCausalLM):
 
         output = MoeCausalLMOutputWithPast(loss=loss, aux_loss=aux_loss, logits=logits, past_key_values=presents, hidden_states=hidden_states)
         return output
+
+    def generate(self, *args, num_return_sequences=1, **kwargs):
+        if num_return_sequences > 1 and 'pixel_values' in kwargs:
+            pv = kwargs['pixel_values']
+            if hasattr(pv, 'keys'):
+                kwargs['pixel_values'] = {k: v.repeat(num_return_sequences, *([1] * (v.ndim - 1))) for k, v in pv.items()}
+            else:
+                kwargs['pixel_values'] = pv.repeat(num_return_sequences, *([1] * (pv.ndim - 1)))
+        return super().generate(*args, num_return_sequences=num_return_sequences, **kwargs)
