@@ -32,21 +32,19 @@
 
 </div>
 
-* This project aims to train a super-small multimodal vision-language model, **MiniMind-V**, with just a cost of 1.3 RMB
-  and 1 hours of work, starting from scratch!
+* This project aims to train a super-small multimodal vision-language model, **MiniMind-V**, with just a cost of 3 RMB
+  and 2 hours of work, starting from scratch!
 * The smallest version of **MiniMind-V** is only about $\frac{1}{2600}$ the size of GPT-3, designed to enable fast
   inference and even training on personal GPUs.
 * **MiniMind-V** is an extension of the visual capabilities of the [MiniMind](https://github.com/jingyaogong/minimind)
   pure language model.
-* The project includes full code for the minimalist structure of large VLM models, dataset cleaning, pretraining, and
-  supervised fine-tuning (SFT).
+* The project includes full code for the minimalist structure of large VLM models, dataset cleaning, Pretrain, and SFT.
 * This is not only the smallest implementation of an open-source VLM model but also a concise tutorial for beginners in
   vision-language models.
 * The hope is that this project can provide a useful example to inspire others and share the joy of creation, helping to
   drive progress in the wider AI community!
 
-> To avoid misunderstandings, the "1 hours" is based on testing (`1 epoch`) with an NVIDIA 3090 hardware device (single GPU), and
-> the "1.3 RMB" refers to GPU server rental costs. 
+> Note: this project is released under the Apache 2.0 license and is completely free. The "2 hours" refer to the measured time of running `1 epoch` of SFT on a single NVIDIA 3090, and the "3 RMB" refer to the GPU rental cost for that time slot.
 
 <div align="center">
 
@@ -66,23 +64,35 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 > (As of 2026-02-15) The MiniMind-V series has completed the training of the following model versions, with the smallest
 > requiring only 67M (0.067B) parameters, capable of both image recognition and conversation!
 
-| Model (Size)              | Inference Memory | Release    |
-|---------------------------|------------------|------------|
-| minimind-3v-moe (201M-A67M) | 1.0 GB           | 2026.04.01 |
-| minimind-3v (67M)         | 0.5 GB           | 2026.04.01 |
-| MiniMind2-V (104M)        | 1.1 GB           | 2025.02.20 |
-| MiniMind2-Small-V (26M)   | 0.6 GB           | 2025.02.20 |
-| minimind-v-v1-small (27M) | 0.6 GB           | 2024.10.04 |
-| minimind-v-v1 (109M)      | 1.1 GB           | 2024.10.04 |
+| Model (Size) | Release |
+|---|---|
+| minimind-3v-moe (201M-A67M) | 2026.04.20 |
+| minimind-3v (67M) | 2026.04.20 |
+| MiniMind2-V (104M) | 2025.02.20 |
+| MiniMind2-Small-V (26M) | 2025.02.20 |
+| minimind-v-v1-small (27M) | 2024.10.04 |
+| minimind-v-v1 (109M) | 2024.10.04 |
 
 ### 👉**Recent Updates**
+
+<details>
+<summary> <b>2026-04-20</b> </summary>
+
+- New checkpoints released: minimind-3v (67M) / minimind-3v-moe (201M-A67M)
+- Projector: added `LayerNorm`, token merging switched to 2D pixel-shuffle
+- Vision Encoder switched to `SiglipVisionModel` (fixed 256×256)
+- Training data moved to ALLaVA-4V (Pretrain 1.27M / SFT 2.9M, merged into a single-stage SFT)
+- Freeze strategy updated: `freeze_llm=1` unfreezes first + last layers; Pretrain/SFT defaults now `2`/`1`; `max_seq_len` 360 → 450
+- Misc bugfixes and small tweaks
+
+</details>
 
 <details> 
 <summary> <b>2026-04-01</b> </summary>
 
 - Added minimind-3v (67M) and minimind-3v-moe (201M-A67M) models
 - Unified 768+8 architecture, supporting both dense and moe modes
-- Switched Visual Encoder from CLIP to SigLIP2 (siglip2-base-p16-ve)
+- Switched Visual Encoder from CLIP to SigLIP2 (siglip2-base-p16-256-ve)
 - Replaced QFormer with MLP Projection + reshape compression
 - Dataset format updated to parquet, mixed data sources, updated tokenizer with image placeholder `<|image_pad|>`, new WebUI with dynamic model directory scanning and dropdown model switching
 - Model code refactored, LLM/VLM unified for Transformers format
@@ -100,18 +110,15 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 
 </details>
 
-<details> 
-<summary> <b>2025-04-27</b> </summary>
-
-- Compatibility updates
-- Adapted to the new feature in the "minimind" repository
-- Standardized parts of the code
-
-</details>
-
 <details>
 
 <summary> <b>More...</b> </summary>
+
+**2025-04-27**
+
+- Compatibility updates
+- Adapted to [MiniMind repository new features](https://github.com/jingyaogong/minimind/issues/370)
+- Code normalization
 
 **2025-02-20**
 
@@ -151,9 +158,9 @@ git clone --depth 1 https://github.com/jingyaogong/minimind-v
 
 ```bash
 # Download the siglip2 model to the ./model directory
-git clone https://huggingface.co/jingyaogong/siglip2-base-p16-ve
+git clone https://huggingface.co/jingyaogong/siglip2-base-p16-256-ve
 # or
-git clone https://modelscope.cn/models/gongjy/siglip2-base-p16-ve
+git clone https://modelscope.cn/models/gongjy/siglip2-base-p16-256-ve
 ```
 
 ```bash
@@ -231,40 +238,42 @@ and place it under `./dataset`.
 
 **[Note 2]** Parquet is a columnar storage format supporting efficient compression and fast reading. To preview data content, run `python lm_dataset.py` in the `dataset/` directory to visualize the first 5 image-text pairs.
 
-Pretrain data:
+Pretrain data (optional; contains caption subset only):
 ```bash
 wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_i2t.parquet
 ```
 
-SFT data:
+SFT data (required; contains full caption + instruct + text merge):
 ```bash
 wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_i2t.parquet
 ```
 
-Please reserve about ~2GB of space for the dataset. If there is insufficient space for pretrain data, you can try skipping the pretrain training step and proceed directly to SFT training.
+The single `sft_i2t.parquet` file (2.9M rows) absorbs Pretrain as a subset, and after global dictionary encoding dedup it is only ~10% larger than the original SFT — enough to cover every training stage.
 
 </details>
 
 ### 3' Start Training
 
-**3.1 Pretraining (Learning image description)**
+**3.1 Pretrain (optional)**
+
+> `sft_i2t.parquet` already contains the Pretrain data as a subset, so **this stage can be skipped** and you may go directly to SFT with `--from_weight llm`. If you prefer the Projector to be pre-aligned first and SFT to converge more stably, run a round of Pretrain separately.
 
 ```bash
 # Basic training command (start from LLM weights, train vision_proj only)
-python train_pretrain_vlm.py --epochs 4 --from_weight llm
+python train_pretrain_vlm.py --epochs 2 --from_weight llm
 ```
 
-> Run pretraining to get `pretrain_vlm_*.pth` as the pretrained model's output weights (* represents the model
-> dimension, default is 768).
+> Run Pretrain to get `pretrain_vlm_*.pth` as the Pretrain output weights (* is the model dimension, default 768).
 
-**3.2 Supervised Fine-Tuning (Learning image-caption dialogue style)**
+**3.2 SFT (required)**
 
 ```bash
-# Basic training command (start from pretrain weights, full parameter fine-tuning)
+# Basic command (default --freeze_llm 1: unfreeze proj + first/last LLM layers, keep middle layers' original LLM weights)
+# If 3.1 was run: --from_weight pretrain_vlm; if Pretrain was skipped: --from_weight llm
 python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
-> Perform supervised fine-tuning to get `sft_vlm_*.pth` as the output weights for the fine-tuned model.
+> Run SFT to get `sft_vlm_*.pth` as the SFT output weights.
 
 <details>
 <summary>Note: Training Details</summary>
@@ -284,7 +293,7 @@ python train_sft_vlm.py --epochs 4 --from_resume 1
 - `--from_weight`: base weight name (llm, pretrain_vlm, none, etc.)
 - `--save_weight`: save weight prefix name
 - `--from_resume`: whether to resume training (0=start from scratch, 1=continue from checkpoint)
-- `--freeze_llm`: whether to freeze LLM parameters (pretrain use only)
+- `--freeze_llm`: freezing strategy (0=all trainable, 1=proj + first/last LLM layers, 2=proj only). Default 2 for Pretrain, 1 for SFT
 - More details can be found in the code
 
 </details>
@@ -345,17 +354,11 @@ and `wandb_run_name` parameters.
 
 # 📌 VLM Detail
 
-The base language model of MiniMind-V (VLM), MiniMind (LLM), comes from the twin
-project [minimind](https://github.com/jingyaogong/minimind). For detailed information on the model structure, training
-specifics, principles, and testing results, please refer to the [minimind](https://github.com/jingyaogong/minimind)
-project. To reduce redundancy, the discussion on LLM-related topics is omitted here, assuming you have a basic
-understanding of MiniMind (LLM).
+The language backbone of MiniMind-V is the `llm_768.pth` trained by the sibling project [minimind](https://github.com/jingyaogong/minimind). The LLM's own structure, training details and experimental analysis are not repeated here; the default assumption is that the reader has a basic understanding of MiniMind LLM. Not having touched the LLM project does not prevent following the "Quick Start" to get MiniMind-V running — the flow is self-contained.
 
-> Even if you are not very familiar with the details of LLMs, you can still follow the "Quick Start" guide to train a
-> MiniMind-V, as it remains unaffected and the repository focuses on the lowest cost for out-of-the-box use!
+The two shorthand labels on the landing page — "from scratch" and "67M" — also need a stricter reading here. "From scratch" means the VLM itself is trained from zero (Projection randomly initialized, first/last LLM layers fine-tuned for alignment), but the LLM backbone is not pretrained from zero — it is continued from the weights of MiniMind. For a strictly "from-zero pretraining" setup, first pretrain an LLM in MiniMind and then plug it back here. "67M" refers to the trainable backbone (LLM ~64M + Projection ~3M); the SigLIP2 vision encoder contributes another ~93M parameters that stay frozen throughout and serve only as an image feature extractor, so the full model at inference time is roughly 160M (dense) / 294M (MoE).
 
-MiniMind-V's structure adds two submodules, a Visual Encoder and a feature projection, with a modality-mixing branch to
-support inputs from multiple modalities:
+The VLM adds a Visual Encoder and a feature projection on top of the LLM, introducing a modality-mixing branch to support multimodal inputs:
 ![LLM-structure](./images/VLM-structure.jpg)
 ![LLM-structure](./images/VLM-structure-moe.jpg)
 
@@ -412,16 +415,13 @@ outputs the end token; here, the "token" doesn’t necessarily have to be text!
 The "foreign language dictionary" is referred to as the Visual Encoder model.  
 Like LlaVA, Qwen-VL, and other visual language models, MiniMind-V now uses the open-source SigLIP2 series models as the
 Visual Encoder.  
-Specifically, we use [siglip2-base-p16-ve](https://huggingface.co/jingyaogong/siglip2-base-p16-ve), a Visual
+Specifically, we use [siglip2-base-p16-256-ve](https://huggingface.co/jingyaogong/siglip2-base-p16-256-ve), a Visual
 Encoder based on the ViT-B/16 architecture for describing image-text information.  
 The current SigLIP2 NaFlex vision encoder generates up to 256 patch tokens from the processor output as the input to the
 encoder layer, which produces a 1×768 dimensional embedding vector for calculating error with the text.  
 We don’t need the final embedding representation, so we only take the output from the encoder layer, which is the output
 feature from the core ViT backbone.  
-It receives 256×768 features from the previous layer, which are then reshaped by concatenating every 4 adjacent tokens into 1 (256×768 → 64×3072), then projected to the LLM's hidden dimension via a 2-layer MLP (Linear→GELU→Linear), resulting in 64 visual tokens input into MiniMind-V.
-After obtaining the image encoder features, the integration with the LLM requires aligning the visual features to the LLM's text token dimension, and mapping the image features into the same space as text embeddings. In other
-words, the image features and native visual tokens cannot be directly treated the same; they require cross-modal feature
-alignment.
+It receives 256×768 features from the previous layer, which are then reshaped by concatenating every 4 adjacent tokens into 1 (256×768 → 64×3072), then projected to the LLM's hidden dimension via a 2-layer MLP (Linear→GELU→Linear), resulting in 64 visual tokens fed into MiniMind-V — this step is exactly cross-modal feature alignment: the native visual features are brought into the semantic space where text tokens live, so that the two can interact in the same space.
 
 [LlaVA-1](https://arxiv.org/pdf/2304.08485) achieves good alignment with a simple linear transformation, [LlaVA-1.5](https://arxiv.org/pdf/2310.03744) upgrades to a 2-layer MLP. MiniMind-V adopts the same MLP Projection approach as LlaVA-1.5, combined with reshape for token compression.
 
@@ -462,62 +462,82 @@ At this point, all the details of `MiniMind-V` have been presented. The VLM mode
 
 ## Ⅰ Dataset
 
-Original Source:
-- [Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions): Contains approximately 570,000 pre-trained images from CC-3M and COCO 2014
-- [llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k): Contains 300k instruction fine-tuning data and 150k images
-- [LLaVA-SFT-665K](https://huggingface.co/datasets/csuhan/LLaVA-SFT-665K): Contains 665k instruction fine-tuning data
+All image-text data used in this round come from the [ALLaVA-4V](https://huggingface.co/datasets/FreedomIntelligence/ALLaVA-4V) family.
+Compared with data stitched together from earlier LLaVA-derived sets, ALLaVA-4V is more consistent in quality, natively paired in Chinese and English, and more thorough in its fine-grained descriptions.
+It is composed of two image sources: a curated subset of LAION (mostly natural images) and a curated subset of VFLAN (documents, charts, synthetic scenes).
 
-The dataset contains both Chinese and English data. The Q&A content has been translated, with better support for Chinese, further organized and resized (pretrain resolution 128×128, sft resolution 160×160).
+- **Pretrain (`pretrain_i2t.parquet`, ~1.27M rows / ~640K unique images)**
+  - `ALLaVA-Caption-LAION-4V` en/zh: ~470K + ~440K
+  - `ALLaVA-Caption-VFLAN-4V` en/zh: ~195K + ~170K
+  - Single-turn "describe this image" style captions used to establish the basic alignment from visual tokens to language tokens.
 
-(pretrain_i2t.parquet) Pre-training dataset format:
+- **SFT (`sft_i2t.parquet`, ~2.90M rows / ~650K unique images)**
+  - `ALLaVA-Instruct-LAION-4V` en/zh: ~470K + ~470K
+  - `ALLaVA-Instruct-VFLAN-4V` en/zh: ~195K + ~165K
+  - `Instruct-LAION-4v-gemini-claude-ensembled` (synthesized by Gemini/Claude): ~50K
+  - `Instruct-LAION-4oiterative` (iteratively refined by GPT-4o): ~50K
+  - Pure-text conversations (8×8 black placeholder images, preserving base language ability): ~230K
+  - **Full Pretrain caption data merged in** (same source as pretrain, ~99% image overlap): ~1.27M
+  - A blend of "image-grounded reasoning Q&A", "caption-style long descriptions" and "pure-text chat" — covering fine-grained follow-ups/long chains of thought as well as image description and general language ability.
+
+Roughly 2.9M samples in total. The Pretrain stage can be skipped entirely (SFT has absorbed it as a subset). Chinese and English are roughly balanced.
+Given MiniMind-V's trainable backbone is only 67M, mixing English and Chinese is a pragmatic choice: Chinese data helps native-language generation, while the original English descriptions tend to be more precise — the two complement each other.
+
+All images are `resize`d to **256×256** (matching SigLIP2 NaFlex's 256 patch-token input) and re-encoded as JPEG, packed directly into parquet.
+
+(`pretrain_i2t.parquet`) Pre-training dataset format:
 
 ```text
-Columns: conversations (json string), image_bytes (binary), image_names (string)
+Columns: conversations (json string), image_bytes (binary)
 
 conversations example:
 [
-  {"role": "user", "content": "Provide a brief description of the given image.\n<image>"},
-  {"role": "assistant", "content": "Olive oil is a healthy ingredient for free use."}
+  {"role": "user", "content": "<image>\nPlease describe this image in detail."},
+  {"role": "assistant", "content": "The image shows..."}
 ]
 image_bytes: <binary image data>
 ```
 
-(sft_i2t.parquet) Single image instruction fine-tuning dataset format:
+(`sft_i2t.parquet`) Single-image SFT dataset format:
 
 ```text
-Columns: conversations (json string), image_bytes (binary), image_names (string)
+Columns: conversations (json string), image_bytes (binary)
 
 conversations example:
 [
-  {"role": "user", "content": "What impact does the location of the alarm clock have on sleep quality?<image>"},
-  {"role": "assistant", "content": "Place the digital alarm clock on the nightstand..."}
+  {"role": "user", "content": "Based on the image, what time of day is it?<image>"},
+  {"role": "assistant", "content": "Judging from the light and shadows..."}
 ]
 image_bytes: <binary image data>
 ```
 
-> Note: sft_i2t.parquet contains ~580K samples in total, of which ~236K are image-text conversations (i2t) and ~346K are pure text conversations (t2t). The latter is used to preserve the model's base language capabilities.
+> Note: sft_i2t.parquet contains ~2.9M samples, of which ~1.40M are image instruct conversations, ~1.27M are image caption descriptions (merged from Pretrain), and ~230K are pure-text conversations (t2t, image column filled by an 8×8 black placeholder) used to preserve the model's base language capabilities. Since Pretrain is already included as a subset, the Pretrain stage can be skipped and SFT run directly.
 
-Dataset download
-link: ([ModelScope](https://www.modelscope.cn/datasets/gongjy/minimind-v_dataset) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))
+Dataset download link: ([ModelScope](https://www.modelscope.cn/datasets/gongjy/minimind-v_dataset) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))
 
 ## Ⅱ Training
 
-Training is divided into two stages, both freezing the Visual Encoder gradients and only training the Projection and LLM parts.
-Training is initialized from LLM pre-trained weights, with support for DDP multi-GPU training, mixed precision (bfloat16), torch.compile acceleration, and swanlab logging.
+Training has two stages (Pretrain optional; SFT required). Both freeze the Visual Encoder and train only the Projection and part of the LLM layers.
+Training is initialized from LLM Pretrain weights, with support for DDP multi-GPU training, mixed precision (bfloat16), torch.compile acceleration, and swanlab logging.
 
-> train_pretrain_vlm
+> train_pretrain_vlm (optional)
 
-The pre-training stage learns general image knowledge from ~1.13M image-text description pairs (e.g., a deer is a deer, a dog is a dog).
-This stage uses a higher learning rate (1e-4), max sequence length of 360, freezes the LLM main parameters, and only sets the Projection and LLM's layer 0 as learnable,
-aiming to quickly establish a basic mapping from visual features to the language space while avoiding damage to the LLM's existing language capabilities.
+The Pretrain stage learns general image knowledge from ~1.27M image-text description pairs (e.g., a deer is a deer, a dog is a dog).
+It uses a higher learning rate (~4e-4), max sequence length 450, and **fully freezes the LLM and Visual Encoder, training only the Projection** (`--freeze_llm 2`).
+The goal is to let the Projector cleanly align visual tokens to the language space without perturbing the original LLM weights.
+Since SFT data already contains all Pretrain samples as a subset, this stage is optional; skipping it saves time, while **running one round of Pretrain first lets the Projector pre-align and makes SFT converge more steadily**.
 
 > train_sft_vlm
 
-The instruction fine-tuning stage learns real Q&A formats from ~580K samples, of which ~236K are image-text multi-turn conversations and ~346K are pure text conversations (to preserve LLM base capabilities).
-This stage uses a lower learning rate (1e-5~1e-6), max sequence length of 768, unfreezes all Projection and LLM parameters for full fine-tuning,
-enabling the model to conduct multi-turn conversations based on image content, while mitigating catastrophic forgetting through the mixed-in pure text data.
+The SFT stage uses the aforementioned `sft_i2t.parquet` — about 2.9M mixed samples, covering the image captions inherited from Pretrain, reasoning-style Q&A on natural images, fine-grained Q&A on documents/charts, instructions synthesized by Gemini/Claude/GPT-4o, plus ~230K pure-text conversations (image column filled by an 8×8 black placeholder). Learning rate drops to ~5e-5, max sequence 768.
+
+A common practice is to fully unfreeze the LLM during SFT, but this usually assumes a several-B-parameter base and a substantial amount of pure-text data mixed into SFT. MiniMind-V's language backbone is only 64M and ~92% of the current SFT data is image-related, so fully unfreezing the LLM would likely dilute its original general-language capability under the image-task gradients.
+
+We therefore use `--freeze_llm 1`: **only the Projection and the first & last LLM layers are unfrozen, while the remaining N-2 layers keep their Pretrain weights**. The first layer is the first processing stage after visual tokens enter the LLM and thus bears the cross-modal fusion; the last layer shapes the format and style of the answer; the middle layers retain the knowledge from LLM Pretrain and are not overwritten by image-task gradients. The ~230K pure-text samples further act as a regularizer for general-language capability.
 
 > Training Time and Loss Trend (for reference only)
+
+On a single NVIDIA 3090, SFT takes ~2 hours per `epoch` in practice; dense and MoE finish in similar time (activated parameters are on the same order, with the gap mostly coming from the extra memory traffic of expert routing). Pretrain data volume is ~45% of SFT's, so one Pretrain epoch can be roughly scaled by that ratio. At a typical cloud price of ~1.5 RMB/hour for a 3090, a full SFT round costs about 3 RMB.
 
 Pretrain [768+8] (dense & moe)  
 ![input](./images/pretrain_loss.jpg)
@@ -532,13 +552,13 @@ SFT [768+8] (dense & moe)
 | Native PyTorch (`*.pth`) | [minimind-3v-pytorch](https://www.modelscope.cn/models/gongjy/minimind-3v-pytorch) | [minimind-3v-pytorch](https://huggingface.co/jingyaogong/minimind-3v-pytorch) |
 | Transformers | [minimind-v collection](https://modelscope.cn/collections/MiniMind-V-42b841dde22d41) | [minimind-v collection](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d) |
 
-> Note: The Transformers version is the `MiniMind-V` model after single-image instruction fine-tuning
+> Note: The Transformers version is the `MiniMind-V` model after single-image SFT
 
 # 📌 Test
 
 ### Effect Test
 
-#### Single Image Dialogue
+Prompt: `<image>\nPlease illustrate the image through your words.`
 
 <table>
   <thead>
@@ -551,92 +571,62 @@ SFT [768+8] (dense & moe)
   <tbody>
     <tr>
       <td>
-        <img src="./dataset/eval_images/airplane-flying-blue-sky.jpg" alt="airplane">
+        <img src="./dataset/eval_images/image-01-golden-dog-balloons.jpg" alt="golden-dog">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image features a white and black airplane parked on a grassy terrain. The layers of a building are likely to be filled with air traffic control, such as the building's tall building, the large building, or the overall pavement. There are also two airplanes parked in the background. The airplanes are displayed on a board, and the airplane is flying through the air while the black and white airplane is parked on the ground.</td>
-      <td>The image features a large jetliner with a large airplane sitting on the ground. It is likely an airplane or an aircraft, possibly a flight jet or a runway.</td>
+      <td>The image shows a golden-brown dog in a park setting with a clear blue sky above. The dog appears to be a golden-brown dog with a cheerful expression, which is characteristic of a Golden Bay breed. The dog's fur is a lighter color, contrasting with the golden balloon, which is likely a balloon with a bright yellow color. The dog's tail is bald, and its tail is darker, indicating it might be a wild, possibly a festive holiday. The dog's bright yellow balloon, along with its tail, stands out against the lighter background of the park. There are no other people or identifying marks in the immediate vicinity of the dog, emphasizing its celebration and a sense of joy.</td>
+      <td>The image depicts a golden-brown dog with a golden-brown coat, likely a Border Collie, standing on a grassy field with a clear blue sky. The dog appears to be a German Shepherd, given its size and the positioning of its tail. Its ears are perked up, and it has a golden-brown coat with a lighter golden hue. The dog's eyes are looking forward, and it seems to be looking down at it. The sky is partly cloudy, suggesting a fair weather day. The dog is standing on a grassy field, with some trees and others in the distance, indicating a calm and natural setting. The overall mood of the image is one of tranquility and enjoyment.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/birthday-cake-candles-table.jpg" alt="birthday-cake">
+        <img src="./dataset/eval_images/image-02-rainbow-umbrella-street.jpg" alt="rainbow-umbrella">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image features a white cake in an old-fashioned cake with cake placed on it. It is surrounded by a few cooked ingredients, including the wedding cake.</td>
-      <td>The image features a white cake in an old-fashioned cake with cake placed on it. It is surrounded by a few cooked ingredients, including the wedding cake.</td>
+      <td>The image shows a rainy day with a rainbow-colored umbrella. The umbrella has a colorful mottled pattern of colorful, orange, yellow, red, green, purple, and blue. The umbrella is surrounded by a bright, irregular, bright daylight with irregular, warm lighting. The umbrella's bright colors range from pink, yellow, purple, green, blue, and red, creating a cool, wet atmosphere. The rainbow-colored umbrella is lit by the bright sky, indicating a sunny day. The umbrella is slightly warmer than the rainbow-colored umbrella, with a reflective surface and a blurred background that suggests a shaded area. The umbrella is in sharp focus, allowing the umbrella to be visible on the scene. The overall impression is one of a tropical or subtropical environment, with the rainbow-colored umbrella in a vibrant green color, creating a sense of depth and natural beauty.</td>
+      <td>The image shows an outdoor scene with a rainy umbrella in the background, likely during a time of day when umbrellas are illuminated. The umbrellas are arranged in a turn, creating a dynamic and colorful umbrella. The umbrellas have a smooth, flat surface with some visible wrinkles and grouting, indicating a high level of detail. The umbrellas are capped with a slightly darker pink hue, providing a lighter gray color that contrasts with the umbrellas. They are positioned in the distance, adding to the umbrella's appearance. The umbrellas are the main subjects, and the umbrellas are positioned in the distance.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/pizza-on-wooden-board.jpg" alt="pizza">
+        <img src="./dataset/eval_images/image-03-cherry-blossom-bike.jpg" alt="cherry-blossom-bike">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image depicts a delicious pizza pizza with fresh toppings, which are likely present in a slice of pizza. The pizza is perfectly crispy, as it has a crispy crust and slightly crispy, making it a delightful pizza presentation. The pizza is filled with fresh toppings, adding to the crispy crust. The pizza is also a bit scrambled, as it has a fresh topping, while the crispy crust is cooked with a pizza pan. The pizza is likely to be a pizza with its crunchy texture and flavorfully. The pizza is also a popular choice for pizza with others, and it is a filling and crispy crust.</td>
-      <td>The image features a scenic burning pizza in a pasta-style board, surrounded by a wooden cabinet, a garner topping for cheese and vegetables. There is a small cabinet nearby, with a pan-familt, a pizza flatter topping. The pizza is situated on the left side of the board, with a bowl of olives placed on top of the side.</td>
+      <td>The image depicts a vibrant pink bicycle, with its wicker basket attached to the bicycle. The bicycle's design is vibrant, with a sleek design that complements the vibrant colors of the pink and white flowers. The basket appears to be made of a material with a durable fabric, and it has a low-profile design, with a slight front wheel and a single rider, which are often used for pedestrian traffic. The bicycle's frame is not fully visible, but it has a black frame and a black handle. There are no visible people or distinctive features that suggest a specific location or event, such as a bike rack or a bike rack, which are not present in this image. The pink bicycle's body is partially visible and has a single seat, suggesting it is likely a bicycle. There are no discernible background elements that provide context or distraction from the image.</td>
+      <td>The image depicts a bright pink bicycle, captured from a perspective view from an elevated perspective. The bicycle is an iconic symbol of the bike, with its rider sporting a touch of white, white, and a touch of purple. The bike is a traditional style with a simple bike and a basketball hoop. It's a sunny day, and the lighting suggests it might be daytime. The scene is set against a pastoral scene, with the pathways leading towards a pathway that casts a warm glow, indicating the serene and warm atmosphere of the scene. The colors in the image are vibrant, with the pink of the pathway standing out against the pale pink of the bicycle. There's a sense of tranquility and freedom of movement.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/red-sports-car-road.jpg" alt="red-car">
+        <img src="./dataset/eval_images/image-04-yellow-car.jpg" alt="yellow-car">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a yellow yellow and red turf coastline on a street, with a couple of cars and a yellow and red traffic lights in the background.</td>
-      <td>The image features a couple of female vanity van lying on a car. The car is situated on the ground, surrounded by a wet furniture. The couple is seen in the middle of the car, possibly observing the scene.</td>
+      <td>The image shows a yellow sports car positioned on a road with a clear blue sky. The car is positioned on a road with a prominent yellow roof, which is characteristic of a yellow sports car. The car is positioned in the front of the car, facing the camera, with its front grille and lower body lines visible, which suggests a sporty aesthetic. The car is parked on a road that appears to be a high-performance sports car, and the background is a parking lot with a few small boats, which is a common feature in such vehicles. There are no visible windows or other objects in the immediate vicinity of the car.</td>
+      <td>The image features a bright yellow sports car parked on a sidewalk. The car is a paved road with a road that appears to be a parking lot, and the sidewalk is bordered by a thin line of trees and a clear blue sky. There are no visible passengers, and the car is parked on a road with a few cars, indicating it is likely a busy day. The car has a sleek design with a high-performance lines and a large round headlamps.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/row-of-colorful-houses.jpg" alt="colorful-houses">
+        <img src="./dataset/eval_images/image-05-superhero-rooftop.jpg" alt="superhero">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>IoT tree is a holiday that is often associated with Christmas culture, history, and celebration. The tree has a unique black and white striped pattern, which features a sweet treat, a budget-friendly chocolate cake with brown spots. The cake is burnt and has a balcony with a sweet treat, with the rich, vibrant colors of the striped pattern. The tree has a rich and burnt color, while the rich and vibrant colors are visually appealing. The tree has a striped pattern, which adds to the overall atmosphere of the image.</td>
-      <td>The image is a colorful scene of a colorful vintage house, with a large pink roof of the wall and a red color scheme. The colorful vintage house has a pink color, and the color scheme appears to be fine, with a red color scheme.</td>
+      <td>The image shows a stylized silhouette of a character from a superhero film series. The character is wearing a long-sleeved blue suit with a blue collar and a red band on the left chest, paired with red trousers. The suit is equipped with a blue suit and a red band on top, and the suit is adorned with a red band, which is also in the midst of a superhero character. The suit is standing outdoors, and the character is on a city street, with a large, blue suit standing out. The sky is a gradient of warm colors, suggesting it is either dawn or dusk. The overall impression is one of a high-energy, urban nighttime scene, with a focus on the character and the character.</td>
+      <td>The image depicts a spaceship scene at what appears to be a cityscape during what appears to be sunset. The scene is dominated by the sky, with the silhouettes of a figure standing on a raised platform, which is the central subject of the image. The figure is dressed in a red and blue suit with a white shirt, which suggests a style commonly associated with the "UNITED SUNDER" superhero franchise. The suit is primarily red with a red hue and a white shirt. There is a figure with a red belt on the right, holding a red object that could be a shield or a wrench. The person is standing on a street with a couple of buildings, indicating that the location might be a city with buildings that are part of the UNITED SUNDER. The sky is filled with a warm orange hue, suggesting a sunset. The overall atmosphere is one of dynamism and fantasy.</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/snow-mountain-lake-view.jpg" alt="snow-mountain">
+        <img src="./dataset/eval_images/image-06-racecar-drift.jpg" alt="racecar">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image features a snowy mountain surrounded by a large, dense mountains. The large body of water is quite dense, with the body of water being hot and the water is sandy. The tall trees are swirls, and the tall trees are standing on the snow-covered ground. The body of water is also sink, creating a savanna-like appearance.</td>
-      <td>The image is an image of a large mountain visible in a lake, surrounded by the idyllic mountains and the mountains. It appears to be a blanket in the ocean, with the river and idylis watching the sea. The mountains are lined with fresh sand and waves, adding a sense of tranquility to the scene.</td>
-    </tr>
-    <tr>
-      <td>
-        <img src="./dataset/eval_images/street-food-hotpot-table.jpg" alt="street-food">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      </td>
-      <td>The image shows a variety of cooking options, including baking meat, cupcakes, and spinach. The baked vegetables are rich in a variety of flavors, including grilled, sautéed, and baked vegetables. The presence of a baked vegetable with a variety of vegetables in different parts suggests a variety of options, including baking, cooking, and baking. The cooking process is highly recommended, with a mix of vegetables and baking times, making it an ideal choice for those who prefer a variety of cooking options. The cooking process is also highly compatible, with a variety of flavors and textures enjoying the cooking process.</td>
-      <td>The image features a variety of freshwater salads, glasses, and coworkers displayed on a table. There is a mix of freshwater ingredients, likely a bun, which can be seen in the menu. The freshwater ingredients are placed on the table, and there is a portion of the coworkers displayed in the middle of the room. There is also a bowl filled with various ingredients.</td>
-    </tr>
-    <tr>
-      <td>
-        <img src="./dataset/eval_images/three-kittens-basket.jpg" alt="kittens">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      </td>
-      <td>The image features a table filled with people standing together, casing bars, and a pair of brown cats. The table is filled with pink and white cats.</td>
-      <td>The image is a black and white detail of a miscellaneous bunch of toys, which is likely to be a part of a group or a similar artistic field.</td>
-    </tr>
-    <tr>
-      <td>
-        <img src="./dataset/eval_images/tropical-beach-palm-tree.jpg" alt="tropical-beach">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      </td>
-      <td>The image features a brown wooden coat.</td>
-      <td>The image shows a sandy beach with an umbrella on top of a chair, providing a visual appeal for people to sit on.</td>
-    </tr>
-    <tr>
-      <td>
-        <img src="./dataset/eval_images/yellow-school-bus-road.jpg" alt="school-bus">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      </td>
-      <td>The image displays a group of people sitting on the bus. They are waiting to be cautious and attentive to their feet, which indicates they are likely to be cautious and followed by the bus.</td>
-      <td>The image features a large collection of school buses, a brick-and-middle bus, and a stack of cars visible in the background. The school bus is situated next to a school bus, and there are several people watching the bus. The school bus is visible in the background, with one person standing behind the other, while the other person is watching the bus. The bus is positioned behind the school bus, creating a seamless and dynamic visual effect.</td>
+      <td>The image captures a dynamic scene at what appears to be a race. In the foreground, a red sports car is mounted on a racetrack, its front face is turned slightly to the left. The car has a prominent rear wing and aerodynamic elements, which suggests a high-speed speed and aerodynamic profile. The track is adorned with multiple windows, one of which is visible, allowing a view of the ground level. The background shows a crowd of spectators, some dressed in red, while others are standing, possibly in the air, in the distance, indicating that this is likely the race of the race. The lighting is warm, and the ground is dim, which gives the racing a warm ambiance. There are no people visible in the image, and the image is taken at a time when the race is being captured and the car is in the air. The lighting conditions suggest that it is either early morning or late afternoon, as the sun is low on the horizon, casting a warm glow and creating a dramatic effect on the track.</td>
+      <td>The image captures a dynamic scene at what appears to be a high-speed race, likely during the golden hour, given the warm lighting and the soft shadows. The track is bathed in a soft glow, indicating the sun is high and possibly at the moment of the race. There are no visible smoke, orbits, or disturbances in the sky, suggesting the race is either during the golden hour or during the golden hour. The race is a sizable form of aerodynamic body, with the front wheel being more pronounced, indicating it may have been used for speed and possibly aerodynamics. The track is bordered by a blurred audience, which may suggest a focus on the race's grandeur or the driver's presence. The track itself has a glossy finish, with some areas showing darker lines and the surrounding structures, which could be part of a track or a similar event.</td>
     </tr>
   </tbody>
 </table>
 
 ### Effect Summary:
 
-Both models can identify image subjects (airplane, cake, car, beach, etc.), but commonly exhibit repetitive expressions and hallucinated details. Limited by model and data scale, the overall performance is at a stage of "understanding the gist but inaccurate on details".
+Both models can identify the primary subject in most images (dog, umbrella, bicycle, sports car, superhero, racecar, etc.), but both exhibit repetitive phrasing and hallucinated details, placing overall performance at a stage of "understanding the gist but inaccurate on details".
 
-Visual signals are treated as a special foreign language by LLMs, so the "language learning" ability highly depends on the LLM's capacity. The stronger the LLM, the more powerful the corresponding VLM, and the performance boost becomes significant.
+Across these 6 samples, the MoE variant produces slightly richer scene descriptions and better color recognition (e.g. the cherry-blossom scene, rainbow umbrella, yellow sports car), while the Dense model tends to be more concise. Over a broader evaluation set, however, MoE occasionally suffers from more pronounced entity-level hallucinations or repetitive generation, showing higher variance than Dense — making Dense the safer default configuration.
+
+Visual signals act as a special "foreign language" to the LLM, so the ceiling of "learning that language" is bounded by the LLM's own language ability. A stronger backbone extracts more value from the same image-text data; swapping MiniMind-V's backbone for a several-B-scale LLM yields clearly sharper details and more coherent reasoning.
 
 #### Future Areas for Improvement:
 
@@ -650,10 +640,8 @@ Visual signals are treated as a special foreign language by LLMs, so the "langua
 # 📌 Acknowledge
 
 > [!TIP]
-> If you find `MiniMind-V` helpful, please consider giving it a ⭐ on GitHub. <br/>
-> Given the limited expertise, there may be unknown issues, and we welcome everyone to discuss, correct, or submit PRs
-> to improve the project in Issues. <br/>
-> Your support is the driving force behind continuous improvements to the project. Thank you!
+> If `MiniMind-V` is useful to you, a ⭐ on GitHub is welcome. <br/>
+> Issues and PRs are the best place to share problems or improvements found while using the project.
 
 ## 🤝 [Contributors](https://github.com/jingyaogong/minimind-v/graphs/contributors)
 

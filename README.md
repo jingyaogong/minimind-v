@@ -33,14 +33,14 @@
 
 </div>
 
-* 此项目旨在从0开始，仅用1.3块钱成本 + 1小时！即可训练出67M参数的超小多模态视觉语言模型**MiniMind-V**。
+* 此项目旨在从0开始，仅用3块钱成本 + 2小时！即可训练出67M参数的超小多模态视觉语言模型**MiniMind-V**。
 * **MiniMind-V**最小版本体积仅为 GPT3 的约 $\frac{1}{2600}$，力求做到个人GPU也可快速推理甚至训练。
 * **MiniMind-V**是[MiniMind](https://github.com/jingyaogong/minimind)纯语言模型的视觉能力额外拓展。
-* 项目同时包含了VLM大模型的极简结构、数据集清洗、预训练(Pretrain)、监督微调(SFT)等全过程代码。
+* 项目同时包含了VLM大模型的极简结构、数据集清洗、Pretrain、SFT等全过程代码。
 * 这不仅是一个开源VLM模型的最小实现，也是入门视觉语言模型的简明教程。
 * 希望此项目能为所有人提供一个抛砖引玉的示例，一起感受创造的乐趣！推动更广泛AI社区的进步！
 
-> 为防止误解，“1小时” 基于NVIDIA 3090硬件设备（单卡）测试`1 epoch`，“1.3块钱” 指GPU服务器租用成本。
+> 注：本项目基于 Apache 2.0 协议开源，完全免费。“2 小时” 指 SFT 阶段在单张 NVIDIA 3090 上跑完 `1 epoch` 的实测耗时，“3 块钱” 指对应时段的 GPU 租用成本。
 
 
 
@@ -61,23 +61,35 @@
 > [!TIP]
 > （截至2026-02-15）MiniMind-V 系列已完成了以下型号模型训练，最小仅需67M (0.067B)，即可具备识图和对话的能力！
 
-| 模型 (大小)                   | 推理占用   | release    | 
-|---------------------------|--------|------------|
-| minimind-3v-moe (201M-A67M) | 1.0 GB | 2026.04.01 |
-| minimind-3v (67M)         | 0.5 GB | 2026.04.01 |
-| MiniMind2-V (104M)        | 1.1 GB | 2025.02.20 |
-| MiniMind2-Small-V (26M)   | 0.6 GB | 2025.02.20 |
-| minimind-v-v1-small (27M) | 0.6 GB | 2024.10.04 |
-| minimind-v-v1 (109M)      | 1.1 GB | 2024.10.04 |
+| 模型 (大小) | release |
+|---|---|
+| minimind-3v-moe (201M-A67M) | 2026.04.20 |
+| minimind-3v (67M) | 2026.04.20 |
+| MiniMind2-V (104M) | 2025.02.20 |
+| MiniMind2-Small-V (26M) | 2025.02.20 |
+| minimind-v-v1-small (27M) | 2024.10.04 |
+| minimind-v-v1 (109M) | 2024.10.04 |
 
 #### 👉 更新日志
+
+<details>
+<summary> <b>2026-04-20</b> </summary>
+
+- 更新模型检查点：minimind-3v (67M) / minimind-3v-moe (201M-A67M)
+- Projector 更新：添加 `LayerNorm`，token 合并改为 2D pixel-shuffle
+- Vision Encoder 换为 `SiglipVisionModel`（固定 256×256）
+- 训练数据切到 ALLaVA-4V（Pretrain 127 万 / SFT 290 万，已合并为单阶段 SFT）
+- Freeze 策略更新：`freeze_llm=1` 解冻首末两层，Pretrain/SFT 默认改为 `2`/`1`；`max_seq_len` 360 → 450
+- 其他 bugfix 与小调整
+
+</details>
 
 <details> 
 <summary> <b>2026-04-01</b> </summary>
 
 - 新增 minimind-3v (67M) 和 minimind-3v-moe (201M-A67M) 模型
 - 统一使用768+8架构，支持dense和moe两种模式
-- 视觉编码器从CLIP切换为SigLIP2（siglip2-base-p16-ve）
+- 视觉编码器从CLIP切换为SigLIP2（siglip2-base-p16-256-ve）
 - 投影模块从QFormer改为MLP Projection + reshape压缩
 - 数据集格式更新为parquet，混合数据源、更新tokenizer，图像占位符改为`<|image_pad|>`、新增WebUI：支持动态扫描模型目录、下拉菜单切换模型
 - 模型代码重构，LLM/VLM统一适配Transformers格式
@@ -95,18 +107,15 @@
 
 </details>
 
-<details> 
-<summary> <b>2025-04-27</b> </summary>
+<details>
+
+<summary> <b>More...</b> </summary>
+
+**2025-04-27**
 
 - 兼容性更新
 - 适配[「minimind仓库新特性」](https://github.com/jingyaogong/minimind/issues/370)
 - 规范化部分代码
-
-</details>
-
-<details>
-
-<summary> <b>More...</b> </summary>
 
 **2025-02-20**
 
@@ -146,9 +155,9 @@ git clone --depth 1 https://github.com/jingyaogong/minimind-v
 
 ```bash
 # 下载siglip2模型到 ./model 目录下
-git clone https://huggingface.co/jingyaogong/siglip2-base-p16-ve
+git clone https://huggingface.co/jingyaogong/siglip2-base-p16-256-ve
 # 或
-git clone https://modelscope.cn/models/gongjy/siglip2-base-p16-ve
+git clone https://modelscope.cn/models/gongjy/siglip2-base-p16-256-ve
 ```
 
 ```bash
@@ -223,40 +232,43 @@ print(torch.cuda.is_available())
 
 【注2】Parquet是列式存储格式，支持高效压缩和快速读取。如果你对它感到陌生，可以预览数据内容，在`dataset/`目录下执行`python lm_dataset.py`可视化前5条图文对
 
-Pretrain数据：
+Pretrain 数据（可选；仅包含 caption 子集）：
 ```bash
 wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_i2t.parquet
 ```
 
-SFT数据：
+SFT 数据（必须；包含 caption + instruct + 纯文本全量合并）：
 ```bash
 wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_i2t.parquet
 ```
 
-建议预留~2GB空间存放数据集，若无多余空间存放pretrain数据，可尝试跳过pretrain训练步骤直接进行sft训练。
+SFT 单文件 290 万条已把 Pretrain 作为子集合并，经全局 dictionary encoding 去重后体积只比 SFT 原版多 ~10%，可覆盖所有训练阶段。
 
 </details>
 
 ### 3' 开始训练
 
-**3.1 预训练（学图像描述）**
+**3.1 Pretrain（可选）**
+
+> SFT 数据集 `sft_i2t.parquet` 已把 Pretrain 数据作为子集合并进来，**此阶段可跳过**，直接 `--from_weight llm` 进入 SFT 即可；若想让 Projector 提前完成对齐、SFT 收敛更稳，可以提前执行 Pretrain。
 
 ```bash
-# 基础训练命令（从LLM权重开始，仅训练vision_proj）
-python train_pretrain_vlm.py --epochs 4 --from_weight llm
+# 基础训练命令（从LLM权重开始，仅训练 vision_proj）
+python train_pretrain_vlm.py --epochs 2 --from_weight llm
 ```
 
-> 执行预训练，得到 `pretrain_vlm_*.pth` 作为预训练的输出权重（其中*为模型的dimension，默认为768）
+> 执行 Pretrain，得到 `pretrain_vlm_*.pth` 作为 Pretrain 的输出权重（其中*为模型的dimension，默认为768）
 
 
-**3.2 监督微调（学看图对话方式）**
+**3.2 SFT（必须）**
 
 ```bash
-# 基础训练命令（从预训练权重开始，全参数微调）
+# 基础训练命令（默认 --freeze_llm 1：解冻 proj + LLM 首尾层，保留中间层原 LLM 知识）
+# 若已执行 3.1：--from_weight pretrain_vlm；若跳过 Pretrain：--from_weight llm
 python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
-> 执行监督微调，得到 `sft_vlm_*.pth` 作为指令微调的输出权重
+> 执行 SFT，得到 `sft_vlm_*.pth` 作为 SFT 的输出权重
 
 <details>
 <summary>注：训练须知</summary>
@@ -276,7 +288,7 @@ python train_sft_vlm.py --epochs 4 --from_resume 1
 - `--from_weight`: 基础权重名称（llm, pretrain_vlm, none等）
 - `--save_weight`: 保存权重的前缀名
 - `--from_resume`: 是否续训（0=从头开始，1=从检查点继续）
-- `--freeze_llm`: 是否冻结LLM参数（仅pretrain使用）
+- `--freeze_llm`: 冻结策略（0=全参可训，1=proj + LLM 首尾层，2=仅训 proj）。Pretrain 默认 2，SFT 默认 1
 - 更多可直接参考代码
 
 </details>
@@ -300,7 +312,7 @@ python eval_vlm.py --weight pretrain_vlm
 ---
 
 > [!TIP]
-> 训练脚本均为Pytorch原生框架，均支持多卡加速，假设你的设备有N (N＞1) 张显卡：
+> 训练脚本均为 PyTorch 原生框架，均支持多卡加速，假设你的设备有N (N＞1) 张显卡：
 
 单机N卡启动训练方式 (DDP, 支持多机多卡集群)
 
@@ -337,14 +349,11 @@ python train_xxx.py --use_wandb
 
 # 📌 模型细节
 
-MiniMind-V (VLM)的基座语言模型MiniMind (LLM)来自孪生项目[minimind](https://github.com/jingyaogong/minimind)，
-具体的模型结构、训练细节、原理、测试效果等均可移步[minimind](https://github.com/jingyaogong/minimind)项目查阅。
-此处为减少冗余，省略讨论LLM的相关部分，默认您已对MiniMind (LLM)的细节有基本的了解。
+MiniMind-V 的语言主干即孪生项目 [minimind](https://github.com/jingyaogong/minimind) 训练得到的 `llm_768.pth`，LLM 本身的结构、训练细节与实验分析不在本仓库重复，默认读者对 MiniMind LLM 已有基本了解。未接触过也不影响照着“快速开始”跑通 MiniMind-V，流程自洽。
 
-> 即使您不太了解LLM的细节，也可参考“快速开始”流程训练一个MiniMind-V，
-> 这并不受到影响，仓库致力于最低成本的开箱即用！
+顶部 “从 0 训练” 和 “67M” 两个简化口号在这里也需要说明。“从 0 训练” 指 VLM 本身从零构建（Projection 随机初始化、LLM 首末层微调对齐），但 LLM 主干并非从零 pretrain，而是基于 MiniMind 的语言模型权重续训而来；若要严格意义上的 “完全从零 pretrain”，请先在 MiniMind 训一版 LLM 再迁回本项目。“67M” 指可训练部分的主干规模（LLM ~64M + Projection ~3M）；视觉编码器 SigLIP2 另有 ~93M 参数全程冻结、仅作图像特征提取，因此推理时整机参数量约 160M（dense）/ 294M（MoE）。
 
-MiniMind-V的结构仅增加Visual Encoder和特征投影两个子模块，增加模态混合分支，以支持多种模态信息的输入：
+VLM 在 LLM 基础上增加 Visual Encoder 和特征投影两个子模块，引入模态混合分支以支持多模态输入：
 ![LLM-structure](./images/VLM-structure.jpg)
 ![LLM-structure](./images/VLM-structure-moe.jpg)
 
@@ -392,15 +401,12 @@ GPT模型根据现有token预测输出下一个下下一个下下下一个token 
 
 "外语词典" 称之为Visual Encoder模型。
 和LlaVA、Qwen-VL等视觉语言模型类似，MiniMind-V当前选用开源SigLIP2系列模型作为Visual Encoder。
-具体使用[siglip2-base-p16-ve](https://huggingface.co/jingyaogong/siglip2-base-p16-ve)，
+具体使用[siglip2-base-p16-256-ve](https://huggingface.co/jingyaogong/siglip2-base-p16-256-ve)，
 一种基于 ViT-B/16 架构的Visual Encoder用于描述图像文本信息。
 当前使用的 SigLIP2 NaFlex 视觉编码器会根据预处理结果生成最多256个patch token作为encoder编码层的输入，
 最终产生1×768维的嵌入向量用于和文本对计算误差。
 我们并不需要最终嵌入表示，因此只取encoder层的输出，也就是VIT核心主干的输出特征即可。
-它拿到前一层256×768大小的特征，通过reshape将每4个相邻token拼接为1个（256×768 → 64×3072），再经过2层MLP（Linear→GELU→Linear）投影到LLM的隐藏维度，最终作为64个visual token输入MiniMind-V。
-与LLM的结合在获取图像encoder特征后，一方面需要把视觉特征对齐到LLM的文本token维度，
-另一方面，要将图像特征映射到与文本embedding相同的空间，即文本token和原生的视觉token需要磨合并不能直接地一视同仁，
-可以称之为跨模态的特征对齐。
+它拿到前一层 256×768 大小的特征，通过 reshape 将每 4 个相邻 token 拼接为 1 个（256×768 → 64×3072），再经过 2 层 MLP（Linear→GELU→Linear）投影到 LLM 的隐藏维度，最终作为 64 个 visual token 输入 MiniMind-V——这一步完成的就是跨模态特征对齐：让原生视觉特征进入文本 token 所在的语义空间，使两者可以在同一空间里交互。
 
 [LlaVA-1](https://arxiv.org/pdf/2304.08485)使用简单的线性变换完成对齐，[LlaVA-1.5](https://arxiv.org/pdf/2310.03744)升级为2层MLP，MiniMind-V采用与LlaVA-1.5相同的MLP Projection方案，并结合reshape进行token压缩。
 
@@ -439,61 +445,82 @@ VLM的输入依然是一段文本，其中包含特殊的`<image>`占位符。
 
 ## Ⅰ 数据集
 
-原始来源：
-- [Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions)：包含约57万张预训练图像，来自CC-3M和COCO 2014
-- [llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k)：包含300k条指令微调数据和15万张图像
-- [LLaVA-SFT-665K](https://huggingface.co/datasets/csuhan/LLaVA-SFT-665K)：包含665k条指令微调数据
+本轮训练用到的图文数据全部来自 [ALLaVA-4V](https://huggingface.co/datasets/FreedomIntelligence/ALLaVA-4V) 系列。
+相比以往从几份 LLaVA 衍生集拼接得到的数据，ALLaVA-4V 的质量更整齐、中英双语原生对照，细粒度描述也更充分。
+它由两个子源构成：一份是 LAION 里挑出来的高质量图片（自然图像为主），一份是 VFLAN 指令流里挑出来的图片（文档、图表、合成场景居多）。
 
-其中部分为中文数据，部分为英文数据。问答内容经过翻译，对中文支持更友好，进一步经过整理并`resize`（pretrain分辨率128×128，sft分辨率160×160）。
+- **Pretrain（`pretrain_i2t.parquet`，约 127 万条 / ~64 万张唯一图像）**
+  - `ALLaVA-Caption-LAION-4V` 英/中：~47万 + ~44万
+  - `ALLaVA-Caption-VFLAN-4V` 英/中：~19万 + ~17万
+  - 任务形式为"请描述这张图片"类的单轮长描述，用于让模型建立视觉 token 到语言 token 的基础对齐。
 
-(pretrain_i2t.parquet) 预训练数据集格式：
+- **SFT（`sft_i2t.parquet`，约 290 万条 / ~65 万张唯一图像）**
+  - `ALLaVA-Instruct-LAION-4V` 英/中：~47万 + ~47万
+  - `ALLaVA-Instruct-VFLAN-4V` 英/中：~19万 + ~17万
+  - `Instruct-LAION-4v-gemini-claude-ensembled`（Gemini/Claude 合成的增广指令）：~5万
+  - `Instruct-LAION-4oiterative`（基于 GPT-4o 迭代润色的指令）：~5万
+  - 纯文本对话（保留基础语言能力，图像列填 8×8 黑图占位）：~23万
+  - **Pretrain caption 数据全量合并**（与 pretrain 同源、~99% 图像重叠）：~127万
+  - 任务形式混合了"围绕图片的推理式问答"、"caption 长描述"和"纯文本对话"，既考验细节追问/长链条推理，也兼顾图像描述与通用语言能力。
+
+合计约 290 万条样本，Pretrain 阶段可直接跳过（SFT 已把 Pretrain 作为子集吸收）。中英比例大致均衡。
+考虑到 MiniMind-V 的语言主干仅 67M，把英文和中文一起喂进去是比较稳妥的做法——中文语料对母语输出更友好，而英文原生描述通常更精细，两者互为补充。
+
+图像统一 `resize` 到 **256×256**（与 SigLIP2 NaFlex 编码器的 256 patch token 输入规格相对应），重新编码为 JPEG 打包进 parquet。
+
+(`pretrain_i2t.parquet`) Pretrain 数据集格式：
 
 ```text
-列名: conversations (json string), image_bytes (binary), image_names (string)
+列名: conversations (json string), image_bytes (binary)
 
 conversations 示例:
 [
-  {"role": "user", "content": "提供给定图像的简要描述。\n<image>"},
-  {"role": "assistant", "content": "橄榄油是自由使用的健康成分。"}
+  {"role": "user", "content": "<image>\n请提供对图片的详细文字描述。"},
+  {"role": "assistant", "content": "这张图片展示的是一个..."}
 ]
 image_bytes: <图像二进制数据>
 ```
 
-(sft_i2t.parquet) 单图指令微调数据集格式：
+(`sft_i2t.parquet`) 单图 SFT 数据集格式：
 
 ```text
-列名: conversations (json string), image_bytes (binary), image_names (string)
+列名: conversations (json string), image_bytes (binary)
 
 conversations 示例:
 [
-  {"role": "user", "content": "闹钟的位置对睡眠质量有什么影响？<image>"},
-  {"role": "assistant", "content": "把数字闹钟放在床头柜..."}
+  {"role": "user", "content": "根据图片推断这个场景的大致时间？<image>"},
+  {"role": "assistant", "content": "从光线和阴影来看..."}
 ]
 image_bytes: <图像二进制数据>
 ```
 
-> 注：sft_i2t.parquet 共约 58 万条数据，其中约 23.6 万条为含图对话（i2t），约 34.6 万条为纯文本对话（t2t），后者用于保持模型的基础语言能力。
+> 注：sft_i2t.parquet 共约 290 万条数据，其中约 140 万条为图像 instruct 对话、约 127 万条为图像 caption 描述（Pretrain 数据合并而来）、约 23 万条为纯文本对话（t2t，图像列填 8×8 黑图占位，用于保持模型的基础语言能力）。由于 Pretrain 已作为子集并入，可选择跳过 Pretrain 阶段直接进行 SFT。
 
 数据集下载地址：([ModelScope](https://www.modelscope.cn/datasets/gongjy/minimind-v_dataset) | [HuggingFace](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset))
 
 ## Ⅱ 训练
 
-训练分为两个阶段，均冻结Visual Encoder梯度，仅训练Projection和LLM部分。
-训练基于LLM预训练权重初始化，支持DDP多卡训练、混合精度（bfloat16）、torch.compile加速和swanlab日志记录。
+训练分为两个阶段（Pretrain 可选；SFT 必需），均冻结 Visual Encoder 梯度，仅训练 Projection 和部分 LLM 层。
+训练基于 LLM Pretrain 权重初始化，支持 DDP 多卡训练、混合精度（bfloat16）、torch.compile 加速和 swanlab 日志记录。
 
-> train_pretrain_vlm
+> train_pretrain_vlm（可选）
 
-预训练阶段从约113万条图文描述数据中学习图片的通用知识（如鹿是鹿，狗是狗）。
-此阶段采用较高学习率（1e-4），最大序列长度360，冻结LLM主体参数，仅设置Projection和LLM的第0层可学习，
-目的是让模型快速建立视觉特征到语言空间的基础映射，同时避免破坏LLM已有的语言能力。
+Pretrain 阶段从约 127 万条图文描述数据中学习图片的通用知识（如鹿是鹿，狗是狗）。
+此阶段采用较高学习率（~4e-4），最大序列长度 450，**完全冻结 LLM 和 Visual Encoder，仅训练 Projection**（`--freeze_llm 2`）。
+目的是让 Projector 干净地完成视觉 token 到语言 token 的基础对齐，不扰动 LLM 原有权重。
+由于 SFT 阶段数据已把 Pretrain 全部样本包含为子集，此步骤可选，跳过可节省时间，但**先跑一轮 Pretrain 让 Projector 先行对齐，SFT 收敛更稳**。
 
 > train_sft_vlm
 
-指令微调阶段从约58万条数据中学习真实问答格式，其中约23.6万条为图文多轮对话，约34.6万条为纯文本对话（用于保持LLM基础能力）。
-此阶段采用较低学习率（1e-5~1e-6），最大序列长度768，解冻Projection和LLM全部参数进行全量微调，
-使模型学会根据图片内容进行多轮对话，并通过混入的纯文本数据缓解灾难性遗忘。
+SFT 阶段的数据即前述 `sft_i2t.parquet`，约 290 万条混合样本，涵盖 Pretrain 继承而来的图文 caption、自然图像上的推理问答、文档/图表的细节问答、Gemini/Claude/GPT-4o 合成的指令，以及约 23 万条纯文本对话（图像列填 8×8 黑图占位）。学习率降到 ~5e-5，最大序列 768。
 
-> 训练时间和Loss走势（仅供参考）
+常见做法是在 SFT 阶段把 LLM 全参解冻，但这通常建立在底座有几 B 参数、且 SFT 数据中混入大量纯文本这两个前提之上。MiniMind-V 的语言主干仅 64M，而当前 SFT 数据中 ~92% 与图像有关，若全参解冻，LLM 原有的通用语言能力极易被图文任务的梯度稀释。
+
+这里采用 `--freeze_llm 1`：**只解冻 Projection 与 LLM 的首、末层，其余 N-2 层保持 Pretrain 时的权重**。首层是视觉 token 进入 LLM 后的第一道处理，直接承担跨模态融合；末层影响回答的格式与风格；中间层保留 LLM Pretrain 的知识，不被图文任务的梯度改写。那 23 万条纯文本样本对通用语言能力也起到类似正则的作用。
+
+> 训练时间和 Loss 走势（仅供参考）
+
+单张 NVIDIA 3090 上，SFT 跑完 `1 epoch` 实测约 2 小时，dense 与 MoE 用时接近（激活参数规模一致，差异主要来自 expert routing 的额外访存）；Pretrain 数据量约为 SFT 的 45%，单 epoch 耗时按比例粗估即可。按云上 3090 约 1.5 元/小时的行情，SFT 单轮成本落在 3 元上下。
 
 Pretrain [768+8] (dense & moe)
 ![input](./images/pretrain_loss.jpg)
@@ -508,13 +535,13 @@ SFT [768+8] (dense & moe)
 | 原生PyTorch (`*.pth`) | [minimind-3v-pytorch](https://www.modelscope.cn/models/gongjy/minimind-3v-pytorch) | [minimind-3v-pytorch](https://huggingface.co/jingyaogong/minimind-3v-pytorch) |
 | Transformers 格式 | [minimind-v collection](https://modelscope.cn/collections/MiniMind-V-42b841dde22d41) | [minimind-v collection](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d) |
 
-> 注：Transformers版本均为单图指令微调后的`MiniMind-V`模型
+> 注：Transformers版本均为单图 SFT 后的`MiniMind-V`模型
 
 # 📌 评估
 
 ### 效果测试
 
-#### 单图对话
+Prompt: `<image>\n请描述这张图中的主要物体和场景。`
 
 <table>
   <thead>
@@ -527,92 +554,62 @@ SFT [768+8] (dense & moe)
   <tbody>
     <tr>
       <td>
-        <img src="./dataset/eval_images/airplane-flying-blue-sky.jpg" alt="airplane">
+        <img src="./dataset/eval_images/image-01-golden-dog-balloons.jpg" alt="golden-dog">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>在这幅图片中，一架白色的飞机正降落在一片广阔的天空中。天空中飘浮着许多流线型的建筑物，这些建筑物散落在天空中。除了主要的飞机外，还有两辆汽车在场景中各处停放，包括一辆巴士和一辆小型汽车。这架飞机似乎停在地面上，表明它们正在进行商业活动。</td>
-      <td>在这张照片中，有一架大型的飞机正在降落，这表明它是为这架飞机而设计的。此外，它停在云层之下，这表明它在移动。天空中有云朵，暗示着这架飞机正在空中飞行。整个场景的背景显示出一种宁静祥和的气氛，暗示这架飞机正在飞行中作为一个机会来进行外交活动或与其他客机接触。</td>
+      <td>这张图片中的主要物体是一只金毛寻回犬，以其金色的皮毛和友好的表情而闻名。金毛寻回犬是这幅图片中的主要对象，以其金色的皮毛和友好的表情而闻名。它们是图片的主要焦点，并在这幅图片中展示了这个狗的特征。</td>
+      <td>这张图片展示了一只金毛寻回犬在草地上享受一群彩色气球，很可能是在玩耍或散步的时候。这只狗的皮毛呈金黄色，尾巴尖端略带波浪状。这只狗的耳朵尖尖，尾巴垂下垂，表明它正在向前看，或者可能正在进行某种形式的玩耍或互动。背景是一片广阔的开阔景观，天空是晴朗的蓝色，零星分布着几朵云。在画面的左侧，有一条黄色和粉色的条纹，它们挂在草地上，为画面增添了色彩和质感。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/birthday-cake-candles-table.jpg" alt="birthday-cake">
+        <img src="./dataset/eval_images/image-02-rainbow-umbrella-street.jpg" alt="rainbow-umbrella">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>图片显示了一张大生日蛋糕，上面刻有各种生日和装饰物的生日和一束蜡烛。这些甜蜜而独特的气味使其成为这个特殊场合的焦点。蛋糕被放在餐桌上，有蛋糕放在上面，很可能是放在桌上，用蜡烛加上蜡烛来营造出诱人的场景。此外，这张生日蛋糕还配上了蜡烛作为装饰物，进一步丰富了整个生日的氛围。</td>
-      <td>这张照片捕捉到了一个生日聚会，各种美味可口的生日蛋糕和一把勺子放在那里。它被放置在一个充满生气的蛋糕盒子里，里面装着各种各样的草莓糖霜糖浆。蛋糕上有一个大号的蜡烛，给人一种温馨和诱人的图案。周围有很多小点心，比如小心地蜡烛和糖霜，让整个蛋糕看起来更加令人放松和诱人。</td>
+      <td>这张图片展示了一只雨伞在城市街道上停放的场景。雨伞主要是鲜艳的颜色，在黑色背景上形成鲜明的对比。它被一条多彩的线连接在一起，可能表明天气状况良好。雨伞的闪闪发光的外套增添了一丝动感，为场景增添了一种动感。雨伞的反射和反射暗示着它可能是为了街道或停车场的静止而被使用。它被放置在一条铺设的道路上，表明这个场景是在城市街道上拍摄的，可能是在一个城市公园或公寓区。</td>
+      <td>这张图中的主要物体是雨伞，它在雨天被雨水滋润。雨伞是主要的物体，通过其设计和大小来识别，使其成为图片的焦点。雨伞的颜色鲜艳，有明亮的黄色、橙色、红色和蓝色，这些颜色通常与雨水相关联。雨伞的反光表面反射着光线，表明它是有光泽的，这在雨天是很常见的。雨伞的反射和颜色表明它可能是由雨水滴或雨水渗入地面，这在雨天是常见的。雨伞的设计，以其多彩的图案和颜色，与雨伞的鲜艳颜色相辅相成，使其成为图片的焦点。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/pizza-on-wooden-board.jpg" alt="pizza">
+        <img src="./dataset/eval_images/image-03-cherry-blossom-bike.jpg" alt="cherry-blossom-bike">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>在这张图片中，有一个装饰着奶酪的比萨饼和一片新鲜的青绿野餐毯。这看起来像是一块沙拉，给人一种清新、诱人、美味的享受体验。披萨的大小和大小暗示着一种随意和随意的用餐体验。画面中，一群人围坐在一块砖块上，其中一些则分散在桌子上，周围摆放着不同种类的青绿野餐毯。此外，桌子上还放着一块披萨片，上面摆放着各种各样的青绿野餐毯，营造出一种轻松愉快的氛围。</td>
-      <td>图中，比萨饼在木桌上。它被切成了比萨饼的大小，而且披萨放置在木桌上。比萨有很多配料，包括奶酪和各种酱汁。披萨有多种口味，包括经典的牛排式和意大利式，还有一些加在比萨表面。比萨上有很多新鲜水果，如西红柿和莫吉托，以及奶酪，使这幅图片更加丰富和有吸引力。</td>
+      <td>这张图片中的主要物体是一辆自行车，具体来说是一辆青绿色的自行车。这一识别是基于几个视觉线索：骑车者的服装，头盔和轮胎的存在，以及前部的后部轮胎，这些都是自行车的特征。此外，背景中有树木和晴朗的天空，进一步强调了这一场景。图片中没有任何可见的物体或人，进一步强调了这辆自行车的特点。</td>
+      <td>这张图片展示了一幅宁静的户外场景，前景是一条繁华的街道，上面挂满了粉色花朵和红色装饰，散落着各种粉色花朵和白色小花。在前景，有一棵开着粉色花朵的大树，树干略显皱纹，暗示着成熟或可能是春天的场景。树后面是一片郁郁葱葱的绿树，树叶浓密，表明可能是春天或夏天。前景是一条铺满粉色花朵的道路，通向画面左侧是一条长满花朵的小径。在道路的右侧，是一条修剪整齐的道路，两旁是修剪整齐的草坪，背景是晴朗的蓝天和远处的另一棵树。整个场景传达了一种宁静和自然美的感觉。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/red-sports-car-road.jpg" alt="red-car">
+        <img src="./dataset/eval_images/image-04-yellow-car.jpg" alt="yellow-car">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>在这幅图片中，一辆白色的马车停泊在一条红色的路牌上。这个车辆位于一条绿油油的道路上，很可能是一个购物中心或高速公路。在这辆车的后部，可以看到一个绿色的马车停泊在路上，这是典型的户外场所。这辆马车可能是为了娱乐或观赏车辆而停放。</td>
-      <td>画面显示了一辆红色高性能赛车，停在一辆大型汽车后面。这辆车可以看到车身、汽车、汽车及汽车停在里面。它似乎是一辆大型红色汽车，有各种大小的汽车，表明它可能是汽车制造商生产的。此外，车辆周围的环境暗示了一种户外环境，因为一辆汽车也出现在场景中。</td>
+      <td>这张图片中的主要物体是一辆现代高尔夫球车，具体来说是一辆在沙漠或海滩上的高尔夫球车。这辆车是主要的焦点，设计时尚，具有流线型的车身，配备了高性能的后扰流板，并配备了赛车轮胎，表明这是一辆高性能跑车。车辆的风格和设计表明它可能是一款高性能跑车，可能是在沙漠或海滩上使用。</td>
+      <td>这张图片展示了一辆明亮的黄色跑车在晴朗的天空下。这辆车看起来是一辆豪华轿车，设计时尚，有着流线型的车身和明显的车顶，暗示着运动性能。它拥有高性能的车身，配有大尺寸的大众Jet和前大灯，展现出时尚的外观。这辆车的车身设计流线型，有流线型的车身线条和明显的车顶线条，暗示着高性能的车型。背景是一片晴朗的天空，有几朵白云，表明天气条件良好。在图片的右侧，可以看到一辆明亮的黄色跑车，暗示着它是为休闲或运动设计的。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/row-of-colorful-houses.jpg" alt="colorful-houses">
+        <img src="./dataset/eval_images/image-05-superhero-rooftop.jpg" alt="superhero">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>画面中，一座蓝色白色的大房子位于一条城市街道上，为这个地区增添了一丝自然与奇思妙想。墙上挂着一盏交通灯，为整个场景增添了特色和引人入胜。</td>
-      <td>画面中，一座蓝色房子旁边有很多小花瓶。这表明这座房子里可能正在营运一些小型小型花盆或盆栽植物。一些人聚集在房子周围，可能正在享受户外生活中的某种乐趣或美景。有些人站在画面中，而其他人则散布于场景中。总体而言，这幅场景捕捉到了一个美丽而令人愉快的场景，展示出该房子里一个令人放松和宁静的环境。</td>
+      <td>这张图中的主要物体是超级英雄的战斗姿态。超级英雄通常是最具威胁性或高能量的形象，以保护和控制英雄。他穿着一套经典的超级英雄服装，包括蓝色牛仔裤和黑色靴子，暗示着他是该品牌的忠实伙伴。超级英雄通常被描绘为一个具有攻击性的角色，通常被视为英雄的特征。超级英雄的服装和姿势，以及他的姿势，表明他可能代表着英雄的身份或身份，而非任何超级英雄。</td>
+      <td>这张图中的主要物体似乎是一个超级英雄角色，可能是超级英雄，考虑到其服装和装甲的风格。这个角色穿着超级英雄服装，包括红色和白色的袍子，这在超级英雄服装中很常见。他手持一块大大的红色和白色的大胆胡须，这是超级英雄服装的标志性特征。这个角色还戴着一条带有红色和白色条纹的红色头盔，这表明他可能是一名战士或领导者。背景是城市天际线，有着现代建筑，天空呈现出蓝色和橙色的色调，暗示着一个城市环境。</td>
     </tr>
     <tr>
       <td>
-        <img src="./dataset/eval_images/snow-mountain-lake-view.jpg" alt="snow-mountain">
+        <img src="./dataset/eval_images/image-06-racecar-drift.jpg" alt="racecar">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>在这幅图片中，有一个高高的山，它看起来像是大森林中的一片高山。天空中闪烁着不同颜色的星星，给画面增加了一抹红点。天空中有两朵高大的树，树木高高地挂在一起，暗示着森林中的宁静与自然之美。在画面的中心，可以看到一棵高大的松树，树干上覆盖着一层薄薄的苔藓。这种高高的松树与周围的大山构成了一个有趣而引人入胜的背景，为这片自然之美增添了一丝神秘色彩。</td>
-      <td>这幅图片展示了一个令人印象深刻的宁静湖面。湖水从天上飘浮着，暗示着一个令人平静和放松的水面。湖边上有几匹高大、形状各异的景象，它们在湖面上显得格外美丽。此外，在湖的边缘，有一座巨大的高山，为整个湖景增添了几分神秘色彩。湖景中的天空也被描述得如画，给整个画面增添了一种纯净和宁静的气氛。</td>
-    </tr>
-    <tr>
-      <td>
-        <img src="./dataset/eval_images/street-food-hotpot-table.jpg" alt="street-food">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      </td>
-      <td>图中，一大群人聚集在一张大餐桌旁欣赏着烤肉和热带水果，其中一人站在一碗里摆放着各种各样的盘子。桌子上放着几个碗，上面摆满了肉类和其他配料。有些放在盘子里，其他的则放在桌子上。在这张餐桌周围，有几个盘子，其中两个放着一杯酒，另一个放在靠近餐桌的左侧。</td>
-      <td>画面中，一群人聚集在一家大餐馆里，享受着一顿饭。这家餐厅的菜单上有一些生菜和猪肉，但它们已经被切成了四份，上面还有一个碗。他们拿着烤肉准备食用。在背景中，有几个瓶子在场景中。还有一把勺子位于桌子左侧，使盘子看起来更吸引人。一盆盆栽植物放在桌子左侧上方，为空间增添了一抹绿色。场景中的其他元素包括一个碗，里面放着葡萄酒和两根葡萄酒。</td>
-    </tr>
-    <tr>
-      <td>
-        <img src="./dataset/eval_images/three-kittens-basket.jpg" alt="kittens">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      </td>
-      <td>图中，一只棕色的小灰猫正坐在篮子里。这只猫身上戴着一顶棕色的帽子，很可能是一个戴帽子的男人。在篮子里，一只棕色的紫色小灰猫正沿着篮子里去休息。这些小猫似乎也在享受这份温暖，但它们似乎并没有完全放过来。此外，背景中还可以看到一把剪刀。这把剪刀看起来是专门为小猫设计的，它可以用作家庭相册或礼物。在篮子的侧边，有几条篮子，其中一条是最亮的，另一条则是最暗的。在篮子中可以看到一只棕色小灰猫，而另一条则是更暗的。</td>
-      <td>在这张照片中，一只小猫坐在篮子里，紧挨着它坐在篮子里的那块木篮上。猫的身体上有九条纹毛发。这个场景描绘了它们之间的亲密关系，展示了它们在一起度过时光的不同场合。画面中，一群大的猫坐在篮子里，其中一只小猫也被描述为小猫，这可能表明他们正在享受与猫互动、与它们的互动或一起度过愉快时光。</td>
-    </tr>
-    <tr>
-      <td>
-        <img src="./dataset/eval_images/tropical-beach-palm-tree.jpg" alt="tropical-beach">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      </td>
-      <td>在这张图片中，沙滩上有很多椅子，还有一些人站着，可以看到一把遮阳伞。虽然它看起来很大，但却没有任何特别的设计。沙滩上有许多椅子，表明这是一家餐馆或者服务员办公室。其中最引人注目的是一张海边椅子，椅子上放着一只热带海滩椅。这个椅子非常适合放松身心、享受海滩时光。此外，还有一些椅子和其他人在场景中，可能是为了放置食物或其他用途。靠近椅子的椅子表示该位置可供使用的其他人使用，也许也有一人在靠近那个椅子的地方。</td>
-      <td>图片显示了一个美丽的海滩场景，有很多椅子散布在天然的棕榈树上。其中一个椅子靠近海滩，而另一个则较小。沙滩上有两把椅子，其中一把靠近中间，另一把则稍微偏左，还有一些则在靠近边缘处。在海边的海滩周围，你可以看到几个人坐在海边的沙滩上，有的靠近海水中，还有一张沙滩椅。其中一张椅子靠近海滩，另一张椅子靠近海边。此外，还可以看到几只遮阳伞，为沙滩上的躺椅提供了遮阴。</td>
-    </tr>
-    <tr>
-      <td>
-        <img src="./dataset/eval_images/yellow-school-bus-road.jpg" alt="school-bus">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      </td>
-      <td>画面中，一辆蓝色的黄色公共汽车正从一辆黄色公共汽车驶过，在道路上停泊着。这辆公共汽车看起来是在一个黄色的黄色高速公路上。图中有几个人，其中一些靠近前景，而另一些则靠后一些，但都没有看到。在黄色公共汽车附近，可以看到一辆停在路边，那辆停在路边。此外，还有两辆不同方向的巴士，一辆靠近前景，另一辆靠近前景，另一辆稍微靠后一些。</td>
-      <td>画面中，一辆黄色和黄色相间的黄色和蓝色交叉路口的蓝色公共汽车正在一条通往路缘上的红色公交车站。有几辆公共汽车正停在路边，它们离一排车道很近。在背景中，可以看到一些长凳，它们在城市里交叉起来。一个长凳位于图中最左侧，而另一个则稍微靠后一点，为画面增添了一些城市特色。整个场景中有很多人和车辆散落在场景各处，包括黄色和蓝色的交叉路口。整个场景给人一种忙碌和迷茫的感觉，这也突显了公共汽车在市区中的存在和目的。</td>
+      <td>这张图片中的主要物体是一辆红色的赛车，很可能是赛车。赛车是赛车运动的典型特征，旨在提高速度、提高燃油效率和赛道的稳定性和安全性。赛车的特征包括前部有大型前部、后部有大型后部，以及与赛道的对峙部分。赛车的颜色和设计与赛车的整体风格相符，以赛车为主。赛车的赛道是静止的，表明这是一条赛道。赛车的赛道是从赛道上移动的，没有任何可见的轨迹或赛道的边缘。</td>
+      <td>这张图片中的主要物体是红色的，它在赛道上被捕捉到在运动中，这可以从赛车的后视图中看出。这个动作是红色的，通过其独特的尾部设计，可以识别出赛道的结构，这是赛道上常见的特征。赛车的赛车设计表明它是为高速赛道赛事设计的，这在赛道上很常见。背景中的观众也可见，但焦点完全集中在红色的赛车上，这表明这个场景是在一个正式的赛道赛事中拍摄的。</td>
     </tr>
   </tbody>
 </table>
 
 ### 效果小结：
 
-两个模型均能识别图像主体（飞机、蛋糕、汽车、海滩等），但普遍存在重复表述和幻觉细节。受限于模型和数据规模，整体处于"能看懂大意、细节不准"的阶段。
+两个模型都能在大多数样本上识别出主体对象（狗、雨伞、自行车、跑车、超级英雄、赛车等），但都伴随重复表述与细节幻觉，整体处于"能看懂大意、细节不准"的阶段。
 
-视觉信号对于LLM视作一种特殊的外语，因此"学习外语"的能力高低，很大程度上取决于LLM的能力。LLM性能越强，对应的VLM越强，此时效果增益会很明显。
+在这 6 张样本上，MoE 版本的整体场景描述与颜色识别略优于 Dense（例如对樱花场景、彩色雨伞、黄色跑车的把握更完整），Dense 则在表达简洁性上占优；不过在更广的评测范围内，MoE 对少数样本会出现较明显的本体级幻觉或重复生成，方差大于 Dense，因此 Dense 仍是更稳妥的默认配置。
+
+视觉信号对 LLM 而言相当于一门特殊的"外语"，"学外语"的上限因此受制于 LLM 自身的语言能力。底座越强，同样的图文数据喂进去收益越大；把 MiniMind-V 的主干换成几 B 量级的 LLM，细节准确度与推理连贯性的提升会相当明显。
 
 #### 未来值得改进的方面：
 

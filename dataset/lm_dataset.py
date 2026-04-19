@@ -118,9 +118,9 @@ class VLMDataset(Dataset):
 if __name__ == '__main__':
     import matplotlib.pyplot as plt; plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei']
     for path in ['pretrain_i2t.parquet', 'sft_i2t.parquet']:
-        t = pa.Table.from_batches(pq.ParquetFile(path).iter_batches()); fig, ax = plt.subplots(1, 5, figsize=(20, 4))
+        pf = pq.ParquetFile(path); n = pf.num_row_groups; t = pa.concat_tables([pf.read_row_group(i * n // 5).slice(0, 1) for i in range(5)]); fig, ax = plt.subplots(1, 5, figsize=(20, 4))
         for i in range(5):
             img_data = t['image_bytes'][i].as_py(); img_data = img_data[0] if isinstance(img_data, list) else img_data
             ax[i].imshow(Image.open(io.BytesIO(img_data))); ax[i].axis('off')
             ax[i].set_title(json.loads(t['conversations'][i].as_py())[1]['content'][:30], fontsize=8)
-        out = path.replace('.parquet', '_preview.png'); plt.savefig(out); print(f'已保存{out}, 共{len(t)}条')
+        out = path.replace('.parquet', '_preview.png'); plt.savefig(out); print(f'已保存{out}, 共{pf.metadata.num_rows}条')

@@ -34,7 +34,7 @@ def scan_vlm_models(base_dir):
 
 def load_vlm_model(model_path):
     global model, tokenizer, preprocess, lm_config, current_model_name
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True)
     model.vision_encoder, model.processor = MiniMindVLM.get_vision_model(vision_model_path)
     if model.vision_encoder is None: raise FileNotFoundError(f"视觉编码器未找到: {vision_model_path}")
@@ -128,12 +128,12 @@ def launch_gradio_server(server_name="0.0.0.0", server_port=7788):
             response += chunk
             yield history + [{"role": "assistant", "content": response}]
 
-    with gr.Blocks(title="minimind-3v", css="#chatbox img{max-width:120px!important;max-height:120px!important;border-radius:8px} div.full-container{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important} div.full-container>.thumbnails{flex-shrink:0!important;max-width:50px!important} div.full-container>.input-container{flex:1!important} .input-wrapper{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important} .input-wrapper>.thumbnails{flex-shrink:0!important;max-width:50px!important} .input-wrapper>.input-row{flex:1!important} .thumbnail-image{max-width:40px!important;max-height:40px!important} textarea{overflow-y:hidden!important}") as demo:
+    with gr.Blocks(title="minimind-3v", css="#chatbox img{max-width:120px!important;max-height:120px!important;border-radius:8px} div.full-container{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important} div.full-container>.thumbnails{flex-shrink:0!important;max-width:50px!important} div.full-container>.input-container{flex:1!important} .input-wrapper{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important} .input-wrapper>.thumbnails{flex-shrink:0!important;max-width:50px!important} .input-wrapper>.input-row{flex:1!important} .thumbnail-image{max-width:40px!important;max-height:40px!important} textarea{overflow-y:hidden!important} #chatbox,#chatbox *{scrollbar-width:none!important;-ms-overflow-style:none!important} #chatbox::-webkit-scrollbar,#chatbox *::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}") as demo:
         gr.HTML('<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:-8px 0 -6px 0"><div style="display:flex;align-items:center;justify-content:center;gap:8px"><img src="https://www.modelscope.cn/api/v1/studio/gongjy/MiniMind/repo?Revision=master&FilePath=images%2Flogo2.png&View=true" style="height:30px"><span style="font-size:1.5rem;font-weight:bold;font-style:italic">minimind-3v</span></div><div style="color:#bbb;font-style:italic;margin:0">AI-generated content may be inaccurate, please verify</div></div>')
         try:
-            chatbot = gr.Chatbot(label="", height=520, elem_id="chatbox", type="messages")
+            chatbot = gr.Chatbot(label="", height=560, elem_id="chatbox", type="messages")
         except TypeError:
-            chatbot = gr.Chatbot(label="", height=520, elem_id="chatbox")
+            chatbot = gr.Chatbot(label="", height=560, elem_id="chatbox")
         msg = gr.MultimodalTextbox(placeholder="输入问题，点击📎上传图片", show_label=False, submit_btn="发送")
         with gr.Row():
             model_dropdown = gr.Dropdown(choices=list(model_dict.keys()), value=current_model_name, show_label=False, scale=1)
@@ -150,9 +150,9 @@ def launch_gradio_server(server_name="0.0.0.0", server_port=7788):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Chat with MiniMind-V")
     parser.add_argument('--load_from', default='./', type=str, help="transformers模型扫描目录")
-    parser.add_argument('--vision_model', default='../model/siglip2-base-p16-ve', type=str, help="视觉编码器路径")
-    parser.add_argument('--temperature', default=0.8, type=float, help="生成温度")
-    parser.add_argument('--top_p', default=0.9, type=float, help="nucleus采样阈值")
+    parser.add_argument('--vision_model', default='../model/siglip2-base-p16-256-ve', type=str, help="视觉编码器路径")
+    parser.add_argument('--temperature', default=0.7, type=float, help="生成温度")
+    parser.add_argument('--top_p', default=0.95, type=float, help="nucleus采样阈值")
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str, help="运行设备")
     parser.add_argument('--max_seq_len', default=8192, type=int, help="最大序列长度")
     args = parser.parse_args()
