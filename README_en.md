@@ -61,7 +61,7 @@ Is it really as complex as imagined to build a VLM-based multimodal large model?
 Is the training process difficult? Now, let's explore the answers and feel the joy of creation together!
 
 > [!TIP]
-> (As of 2026-02-15) The MiniMind-V series has completed the training of the following model versions, with the smallest
+> (As of 2026-04-20) The MiniMind-V series has completed the training of the following model versions, with the smallest
 > requiring only 67M (0.067B) parameters, capable of both image recognition and conversation!
 
 | Model (Size) | Release |
