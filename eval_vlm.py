@@ -17,16 +17,15 @@ def init_model(args):
         ckp = f'./{args.save_dir}/{args.weight}_{args.hidden_size}{moe_suffix}.pth'
         model = MiniMindVLM(
             VLMConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers, use_moe=bool(args.use_moe)),
-            vision_model_path="./model/siglip2-base-p16-256-ve"
+            vision_model_path="./model/siglip2-base-p32-256-ve"
         )
         state_dict = torch.load(ckp, map_location=args.device)
         model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=False)
     else:
         model = AutoModelForCausalLM.from_pretrained(args.load_from, trust_remote_code=True)
-        model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("./model/siglip2-base-p16-256-ve")
+        model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("./model/siglip2-base-p32-256-ve")
     get_model_params(model, model.config)
-    preprocess = model.processor
-    return model.half().eval().to(args.device), tokenizer, preprocess
+    return model.half().eval().to(args.device), tokenizer, model.processor
 
 
 def main():
@@ -54,7 +53,6 @@ def main():
     for image_file in sorted(os.listdir(args.image_dir)):
         if image_file.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
             setup_seed(random.randint(1, 31415926))
-            setup_seed(512)
             image_path = os.path.join(args.image_dir, image_file)
             image = Image.open(image_path).convert('RGB')
             pixel_values = {k: v.to(args.device) for k, v in MiniMindVLM.image2tensor(image, preprocess).items()}

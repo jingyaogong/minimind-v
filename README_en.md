@@ -62,12 +62,12 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 
 > [!TIP]
 > (As of 2026-04-20) The MiniMind-V series has completed the training of the following model versions, with the smallest
-> requiring only 67M (0.067B) parameters, capable of both image recognition and conversation!
+> requiring only 65M (0.065B) parameters, capable of both image recognition and conversation!
 
 | Model (Size) | Release |
 |---|---|
-| minimind-3v-moe (201M-A67M) | 2026.04.20 |
-| minimind-3v (67M) | 2026.04.20 |
+| minimind-3v-moe (200M-A65M) | 2026.04.20 |
+| minimind-3v (65M) | 2026.04.20 |
 | MiniMind2-V (104M) | 2025.02.20 |
 | MiniMind2-Small-V (26M) | 2025.02.20 |
 | minimind-v-v1-small (27M) | 2024.10.04 |
@@ -78,9 +78,9 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 <details>
 <summary> <b>2026-04-20</b> </summary>
 
-- New checkpoints released: minimind-3v (67M) / minimind-3v-moe (201M-A67M)
-- Projector: added `LayerNorm`, token merging switched to 2D pixel-shuffle
-- Vision Encoder switched to `SiglipVisionModel` (fixed 256×256)
+- New checkpoints released: minimind-3v (65M) / minimind-3v-moe (200M-A65M)
+- Projector: added `LayerNorm`, removed reshape token merging (P32 natively outputs 64 tokens, no downsampling needed)
+- Vision Encoder switched to `SiglipVisionModel` (P32, fixed 256×256)
 - Training data moved to ALLaVA-4V (Pretrain 1.27M / SFT 2.9M, merged into a single-stage SFT)
 - Freeze strategy updated: `freeze_llm=1` unfreezes first + last layers; Pretrain/SFT defaults now `2`/`1`; `max_seq_len` 360 → 450
 - Misc bugfixes and small tweaks
@@ -158,9 +158,9 @@ git clone --depth 1 https://github.com/jingyaogong/minimind-v
 
 ```bash
 # Download the siglip2 model to the ./model directory
-git clone https://huggingface.co/jingyaogong/siglip2-base-p16-256-ve
+git clone https://huggingface.co/jingyaogong/siglip2-base-p32-256-ve
 # or
-git clone https://modelscope.cn/models/gongjy/siglip2-base-p16-256-ve
+git clone https://modelscope.cn/models/gongjy/siglip2-base-p32-256-ve
 ```
 
 ```bash
@@ -356,7 +356,7 @@ and `wandb_run_name` parameters.
 
 The language backbone of MiniMind-V is the `llm_768.pth` trained by the sibling project [minimind](https://github.com/jingyaogong/minimind). The LLM's own structure, training details and experimental analysis are not repeated here; the default assumption is that the reader has a basic understanding of MiniMind LLM. Not having touched the LLM project does not prevent following the "Quick Start" to get MiniMind-V running — the flow is self-contained.
 
-The two shorthand labels on the landing page — "from scratch" and "67M" — also need a stricter reading here. "From scratch" means the VLM itself is trained from zero (Projection randomly initialized, first/last LLM layers fine-tuned for alignment), but the LLM backbone is not pretrained from zero — it is continued from the weights of MiniMind. For a strictly "from-zero pretraining" setup, first pretrain an LLM in MiniMind and then plug it back here. "67M" refers to the trainable backbone (LLM ~64M + Projection ~3M); the SigLIP2 vision encoder contributes another ~93M parameters that stay frozen throughout and serve only as an image feature extractor, so the full model at inference time is roughly 160M (dense) / 294M (MoE).
+The two shorthand labels on the landing page — "from scratch" and "65M" — also need a stricter reading here. "From scratch" means the VLM itself is trained from zero (Projection randomly initialized, first/last LLM layers fine-tuned for alignment), but the LLM backbone is not pretrained from zero — it is continued from the weights of MiniMind. For a strictly "from-zero pretraining" setup, first pretrain an LLM in MiniMind and then plug it back here. "65M" refers to the trainable backbone (LLM ~64M + Projection ~1M); the SigLIP2 vision encoder contributes another ~95M parameters that stay frozen throughout and serve only as an image feature extractor, so the full model at inference time is roughly 160M (dense) / 294M (MoE).
 
 The VLM adds a Visual Encoder and a feature projection on top of the LLM, introducing a modality-mixing branch to support multimodal inputs:
 ![LLM-structure](./images/VLM-structure.jpg)
@@ -415,15 +415,15 @@ outputs the end token; here, the "token" doesn’t necessarily have to be text!
 The "foreign language dictionary" is referred to as the Visual Encoder model.  
 Like LlaVA, Qwen-VL, and other visual language models, MiniMind-V now uses the open-source SigLIP2 series models as the
 Visual Encoder.  
-Specifically, we use [siglip2-base-p16-256-ve](https://huggingface.co/jingyaogong/siglip2-base-p16-256-ve), a Visual
-Encoder based on the ViT-B/16 architecture for describing image-text information.  
-The current SigLIP2 NaFlex vision encoder generates up to 256 patch tokens from the processor output as the input to the
+Specifically, we use [siglip2-base-p32-256-ve](https://huggingface.co/jingyaogong/siglip2-base-p32-256-ve), a Visual
+Encoder based on the ViT-B/32 architecture for describing image-text information.  
+The current SigLIP2 NaFlex vision encoder generates 64 patch tokens (256×256 image / patch_size 32 = 8×8 = 64) from the processor output as the input to the
 encoder layer, which produces a 1×768 dimensional embedding vector for calculating error with the text.  
-We don’t need the final embedding representation, so we only take the output from the encoder layer, which is the output
+We don't need the final embedding representation, so we only take the output from the encoder layer, which is the output
 feature from the core ViT backbone.  
-It receives 256×768 features from the previous layer, which are then reshaped by concatenating every 4 adjacent tokens into 1 (256×768 → 64×3072), then projected to the LLM's hidden dimension via a 2-layer MLP (Linear→GELU→Linear), resulting in 64 visual tokens fed into MiniMind-V — this step is exactly cross-modal feature alignment: the native visual features are brought into the semantic space where text tokens live, so that the two can interact in the same space.
+It receives 64×768 features from the previous layer, which are projected to the LLM's hidden dimension via LayerNorm + a 2-layer MLP (Linear→GELU→Linear), resulting in 64 visual tokens fed into MiniMind-V — this step is exactly cross-modal feature alignment: the native visual features are brought into the semantic space where text tokens live, so that the two can interact in the same space.
 
-[LlaVA-1](https://arxiv.org/pdf/2304.08485) achieves good alignment with a simple linear transformation, [LlaVA-1.5](https://arxiv.org/pdf/2310.03744) upgrades to a 2-layer MLP. MiniMind-V adopts the same MLP Projection approach as LlaVA-1.5, combined with reshape for token compression.
+[LlaVA-1](https://arxiv.org/pdf/2304.08485) achieves good alignment with a simple linear transformation, [LlaVA-1.5](https://arxiv.org/pdf/2310.03744) upgrades to a 2-layer MLP. MiniMind-V adopts the same MLP Projection approach as LlaVA-1.5 (P32 natively outputs 64 tokens, no additional reshape compression needed).
 
 ![llava-structure](./images/llava-structure.png)
 
@@ -445,7 +445,7 @@ For example:
 <image>\nWhat is in this image?
 ```
 
-In `minimind-v`, the image is replaced by 64 `<|image_pad|>` tokens as placeholder (the 256 SigLIP2 patch features are compressed to 64 tokens via reshape+MLP),  
+In `minimind-v`, the image is replaced by 64 `<|image_pad|>` tokens as placeholder (SigLIP2 P32 directly outputs 64 patch tokens, projected to 64 visual tokens via MLP),  
 thus the `minimind-v` prompt becomes:
 
 ```text
@@ -481,9 +481,9 @@ It is composed of two image sources: a curated subset of LAION (mostly natural i
   - A blend of "image-grounded reasoning Q&A", "caption-style long descriptions" and "pure-text chat" — covering fine-grained follow-ups/long chains of thought as well as image description and general language ability.
 
 Roughly 2.9M samples in total. The Pretrain stage can be skipped entirely (SFT has absorbed it as a subset). Chinese and English are roughly balanced.
-Given MiniMind-V's trainable backbone is only 67M, mixing English and Chinese is a pragmatic choice: Chinese data helps native-language generation, while the original English descriptions tend to be more precise — the two complement each other.
+Given MiniMind-V's trainable backbone is only 65M, mixing English and Chinese is a pragmatic choice: Chinese data helps native-language generation, while the original English descriptions tend to be more precise — the two complement each other.
 
-All images are `resize`d to **256×256** (matching SigLIP2 NaFlex's 256 patch-token input) and re-encoded as JPEG, packed directly into parquet.
+All images are `resize`d to **256×256** (matching SigLIP2 NaFlex's input specification; P32 produces 64 patch tokens) and re-encoded as JPEG, packed directly into parquet.
 
 (`pretrain_i2t.parquet`) Pre-training dataset format:
 
@@ -529,7 +529,7 @@ Since SFT data already contains all Pretrain samples as a subset, this stage is 
 
 > train_sft_vlm
 
-The SFT stage uses the aforementioned `sft_i2t.parquet` — about 2.9M mixed samples, covering the image captions inherited from Pretrain, reasoning-style Q&A on natural images, fine-grained Q&A on documents/charts, instructions synthesized by Gemini/Claude/GPT-4o, plus ~230K pure-text conversations (image column filled by an 8×8 black placeholder). Learning rate drops to ~5e-5, max sequence 768.
+The SFT stage uses the aforementioned `sft_i2t.parquet` — about 2.9M mixed samples, covering the image captions inherited from Pretrain, reasoning-style Q&A on natural images, fine-grained Q&A on documents/charts, instructions synthesized by Gemini/Claude/GPT-4o, plus ~230K pure-text conversations (image column filled by an 8×8 black placeholder). Learning rate drops to ~5e-6, max sequence 768.
 
 A common practice is to fully unfreeze the LLM during SFT, but this usually assumes a several-B-parameter base and a substantial amount of pure-text data mixed into SFT. MiniMind-V's language backbone is only 64M and ~92% of the current SFT data is image-related, so fully unfreezing the LLM would likely dilute its original general-language capability under the image-task gradients.
 
@@ -574,57 +574,57 @@ Prompt: `<image>\nPlease illustrate the image through your words.`
         <img src="./dataset/eval_images/image-01-golden-dog-balloons.jpg" alt="golden-dog">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a golden-brown dog in a park setting with a clear blue sky above. The dog appears to be a golden-brown dog with a cheerful expression, which is characteristic of a Golden Bay breed. The dog's fur is a lighter color, contrasting with the golden balloon, which is likely a balloon with a bright yellow color. The dog's tail is bald, and its tail is darker, indicating it might be a wild, possibly a festive holiday. The dog's bright yellow balloon, along with its tail, stands out against the lighter background of the park. There are no other people or identifying marks in the immediate vicinity of the dog, emphasizing its celebration and a sense of joy.</td>
-      <td>The image depicts a golden-brown dog with a golden-brown coat, likely a Border Collie, standing on a grassy field with a clear blue sky. The dog appears to be a German Shepherd, given its size and the positioning of its tail. Its ears are perked up, and it has a golden-brown coat with a lighter golden hue. The dog's eyes are looking forward, and it seems to be looking down at it. The sky is partly cloudy, suggesting a fair weather day. The dog is standing on a grassy field, with some trees and others in the distance, indicating a calm and natural setting. The overall mood of the image is one of tranquility and enjoyment.</td>
+      <td>The image features a golden retriever in mid-motion, captured in mid-air, with its head tilted towards the camera. The dog, which appears to be a Golden Retriever, is in motion, with its tongue slightly out of focus, suggesting it's either waiting or turning. It has a distinctive blue tongue, which is a common feature in many dog breeds. The dog is standing on a grassy field with a few scattered clouds, and its mouth is open as if it is about to take a bite. The sky is partly cloudy, indicating fair weather. The lighting suggests it's daytime with ample sunlight, casting soft shadows on the grass and the grass.</td>
+      <td>The image features a golden golden-brown dog with a slightly furrowed brow, likely in motion, as if in mid-motion. It's captured in a bright, natural setting, with a clear sky above and a clear blue sky above. The dog appears to be a German Shepherd, given its size and the prominence of its tongue and the bright red of its tongue. The dog's ears are perked up, suggesting it may be a pet. The grass is a vibrant green, and the sky is clear with no visible clouds, indicating good weather. There is a sense of motion in the photograph, with the dog's head tilted downwards and its eyes looking towards the sky.</td>
     </tr>
     <tr>
       <td>
         <img src="./dataset/eval_images/image-02-rainbow-umbrella-street.jpg" alt="rainbow-umbrella">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a rainy day with a rainbow-colored umbrella. The umbrella has a colorful mottled pattern of colorful, orange, yellow, red, green, purple, and blue. The umbrella is surrounded by a bright, irregular, bright daylight with irregular, warm lighting. The umbrella's bright colors range from pink, yellow, purple, green, blue, and red, creating a cool, wet atmosphere. The rainbow-colored umbrella is lit by the bright sky, indicating a sunny day. The umbrella is slightly warmer than the rainbow-colored umbrella, with a reflective surface and a blurred background that suggests a shaded area. The umbrella is in sharp focus, allowing the umbrella to be visible on the scene. The overall impression is one of a tropical or subtropical environment, with the rainbow-colored umbrella in a vibrant green color, creating a sense of depth and natural beauty.</td>
-      <td>The image shows an outdoor scene with a rainy umbrella in the background, likely during a time of day when umbrellas are illuminated. The umbrellas are arranged in a turn, creating a dynamic and colorful umbrella. The umbrellas have a smooth, flat surface with some visible wrinkles and grouting, indicating a high level of detail. The umbrellas are capped with a slightly darker pink hue, providing a lighter gray color that contrasts with the umbrellas. They are positioned in the distance, adding to the umbrella's appearance. The umbrellas are the main subjects, and the umbrellas are positioned in the distance.</td>
+      <td>The image shows a rain-shaped umbrella with a gradient of colors ranging from yellow to blue. The umbrella's umbrella is visible, showing a multicolored rainbow pattern with the gradient of colors. The water is illuminated by the rain, suggesting recent rain. The rainbow has a distinctive gradient of colors, primarily red, green, blue, yellow, and white, with the darker colors and the lighter colors on the umbrella's surface. In the background, there are buildings with red-roofed buildings, indicating a residential area. The weather appears overcast, and the lighting is soft, with no harsh shadows, indicating either early morning or late afternoon.</td>
+      <td>The image shows a rainbow umbrella in the midground, with a faint reflection of the umbrella. The umbrella is orange with a black fabric, and it is surrounded by a misty effect, suggesting the umbrella is illuminated. The umbrella is turned off, with its umbrella open in the middle ground, showing its umbrella open. The mist appears to be frosted, as indicated by the reflection of the umbrella. The background is blurred but shows an urban setting with buildings, possibly a street, and the sky is overcast. There is no discernible human activity in the image.</td>
     </tr>
     <tr>
       <td>
         <img src="./dataset/eval_images/image-03-cherry-blossom-bike.jpg" alt="cherry-blossom-bike">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image depicts a vibrant pink bicycle, with its wicker basket attached to the bicycle. The bicycle's design is vibrant, with a sleek design that complements the vibrant colors of the pink and white flowers. The basket appears to be made of a material with a durable fabric, and it has a low-profile design, with a slight front wheel and a single rider, which are often used for pedestrian traffic. The bicycle's frame is not fully visible, but it has a black frame and a black handle. There are no visible people or distinctive features that suggest a specific location or event, such as a bike rack or a bike rack, which are not present in this image. The pink bicycle's body is partially visible and has a single seat, suggesting it is likely a bicycle. There are no discernible background elements that provide context or distraction from the image.</td>
-      <td>The image depicts a bright pink bicycle, captured from a perspective view from an elevated perspective. The bicycle is an iconic symbol of the bike, with its rider sporting a touch of white, white, and a touch of purple. The bike is a traditional style with a simple bike and a basketball hoop. It's a sunny day, and the lighting suggests it might be daytime. The scene is set against a pastoral scene, with the pathways leading towards a pathway that casts a warm glow, indicating the serene and warm atmosphere of the scene. The colors in the image are vibrant, with the pink of the pathway standing out against the pale pink of the bicycle. There's a sense of tranquility and freedom of movement.</td>
+      <td>The image features a vibrant pink bicycle on a paved road, with a lush green palette dominated by pink and white blooms. The bicycle is positioned on a road, with a slightly elevated position and a brown handlebar on the right. The bicycle is positioned on a paved road, with a pedestal area visible on the left side of the frame, and a small, round, wooden frame with a rounded top. The bicycle is positioned in front of a white bicycle, and the background is softly blurred, with no discernible features that suggest a location or setting. The lighting is bright, and the overall mood of the image is peaceful and serene.</td>
+      <td>The image features a vibrant pink pink scene on a street during the daytime. In the foreground, there's a large, classic bicycle with a sleek design, featuring a classic bike with a brown handlebar and a black frame. The bike has a blue handlebar and a chain strap, indicating it is designed for carrying luggage. Behind the bicycle, a series of pink blossoms and green foliage are visible, suggesting a garden or park setting. The background is blurred, with the focus on the pink and bicycle, which is the central subject of the image. The overall setting appears to be a serene, sunny day, with a clear sky and gentle lighting in the background.</td>
     </tr>
     <tr>
       <td>
         <img src="./dataset/eval_images/image-04-yellow-car.jpg" alt="yellow-car">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a yellow sports car positioned on a road with a clear blue sky. The car is positioned on a road with a prominent yellow roof, which is characteristic of a yellow sports car. The car is positioned in the front of the car, facing the camera, with its front grille and lower body lines visible, which suggests a sporty aesthetic. The car is parked on a road that appears to be a high-performance sports car, and the background is a parking lot with a few small boats, which is a common feature in such vehicles. There are no visible windows or other objects in the immediate vicinity of the car.</td>
-      <td>The image features a bright yellow sports car parked on a sidewalk. The car is a paved road with a road that appears to be a parking lot, and the sidewalk is bordered by a thin line of trees and a clear blue sky. There are no visible passengers, and the car is parked on a road with a few cars, indicating it is likely a busy day. The car has a sleek design with a high-performance lines and a large round headlamps.</td>
+      <td>The image shows a bright yellow sports car positioned on a paved road. The car has a distinctive design with a long streamlined body, aerodynamic contours, and a long, streamlined body, typical of high-performance sports cars. The car's headlights are aerodynamic, and it has a low profile, aerodynamic brake, and a short, streamlined body. The windows appear to be tinted, and there's a clear sky above and a clear blue sky with few clouds. The car is parked on a road, with a hint of a flatbed traffic in the distance, indicating that this may be a busy road trip. The watermark "LOCKERS" is visible on the bottom right corner of the image, suggesting that this image may have been taken by a professional photographer or a promotional material.</td>
+      <td>The image features a bright yellow sports car parked on a paved asphalt surface. The car is a sleek, aerodynamic design with a sleek, sporty body, aerodynamic lines, and aerodynamic bodywork. Its design suggests a modern, sporty aesthetic with a sporty appearance. The car's headlights are narrow and integrated into the design, with the headlights appearing to be short and streamlined, indicating a design that is likely sporty. The windows are tinted, and the vehicle is equipped with a black and white livery, which provides a contrast to the vibrant colors of the car. The sky is partly cloudy, with no clouds visible, suggesting a fair weather day. There are no people or other objects in the frame, placing the entire focus on the car.</td>
     </tr>
     <tr>
       <td>
         <img src="./dataset/eval_images/image-05-superhero-rooftop.jpg" alt="superhero">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image shows a stylized silhouette of a character from a superhero film series. The character is wearing a long-sleeved blue suit with a blue collar and a red band on the left chest, paired with red trousers. The suit is equipped with a blue suit and a red band on top, and the suit is adorned with a red band, which is also in the midst of a superhero character. The suit is standing outdoors, and the character is on a city street, with a large, blue suit standing out. The sky is a gradient of warm colors, suggesting it is either dawn or dusk. The overall impression is one of a high-energy, urban nighttime scene, with a focus on the character and the character.</td>
-      <td>The image depicts a spaceship scene at what appears to be a cityscape during what appears to be sunset. The scene is dominated by the sky, with the silhouettes of a figure standing on a raised platform, which is the central subject of the image. The figure is dressed in a red and blue suit with a white shirt, which suggests a style commonly associated with the "UNITED SUNDER" superhero franchise. The suit is primarily red with a red hue and a white shirt. There is a figure with a red belt on the right, holding a red object that could be a shield or a wrench. The person is standing on a street with a couple of buildings, indicating that the location might be a city with buildings that are part of the UNITED SUNDER. The sky is filled with a warm orange hue, suggesting a sunset. The overall atmosphere is one of dynamism and fantasy.</td>
+      <td>The image depicts a man standing on a raised, stern, ornate torch. He is dressed in a vibrant red and blue suit with a white shirt and a red swoosh on his head. His suit is adorned with a red cross, suggesting a superhero's personal style. The torch is illuminated with warm light, possibly from the sun, creating a soft, diffused light that enhances the three-dimensional effect. The sky is partly cloudy, indicating either early morning or late afternoon light. The terrain is populated with numerous high-rise buildings, some of which have a tall, slender building with a white roof. The buildings appear to be part of a cityscape, possibly in the United States. The sky is partly cloudy, suggesting it's either sunrise or sunset. The image is taken during the golden hour, with the sun setting behind the torch and the sky.</td>
+      <td>The image features a female superhero standing on a steeplewheeled rooftop. She is dressed in a blue and red suit with a sleeveless blue top, which is red with a large, bold front opening. The suit is complemented by a red belt with a silver buckle, which is a characteristic feature of the superhero's superhero. Her hair is styled in a bun, and she has a confident stance with one hand on her hip and the other holding a weapon. The background is a clear sky with a gradient of warm colors, suggesting either dawn or dusk, with the sun setting in the background being the bright sunlight. The sky is a gradient of warm colors, transitioning from a warm yellow near the horizon to a deeper blue as it moves towards the sky.</td>
     </tr>
     <tr>
       <td>
         <img src="./dataset/eval_images/image-06-racecar-drift.jpg" alt="racecar">
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
-      <td>The image captures a dynamic scene at what appears to be a race. In the foreground, a red sports car is mounted on a racetrack, its front face is turned slightly to the left. The car has a prominent rear wing and aerodynamic elements, which suggests a high-speed speed and aerodynamic profile. The track is adorned with multiple windows, one of which is visible, allowing a view of the ground level. The background shows a crowd of spectators, some dressed in red, while others are standing, possibly in the air, in the distance, indicating that this is likely the race of the race. The lighting is warm, and the ground is dim, which gives the racing a warm ambiance. There are no people visible in the image, and the image is taken at a time when the race is being captured and the car is in the air. The lighting conditions suggest that it is either early morning or late afternoon, as the sun is low on the horizon, casting a warm glow and creating a dramatic effect on the track.</td>
-      <td>The image captures a dynamic scene at what appears to be a high-speed race, likely during the golden hour, given the warm lighting and the soft shadows. The track is bathed in a soft glow, indicating the sun is high and possibly at the moment of the race. There are no visible smoke, orbits, or disturbances in the sky, suggesting the race is either during the golden hour or during the golden hour. The race is a sizable form of aerodynamic body, with the front wheel being more pronounced, indicating it may have been used for speed and possibly aerodynamics. The track is bordered by a blurred audience, which may suggest a focus on the race's grandeur or the driver's presence. The track itself has a glossy finish, with some areas showing darker lines and the surrounding structures, which could be part of a track or a similar event.</td>
+      <td>The image captures a dynamic scene of a Ford Motor Company in mid-air, captured during twilight. The car is a Ford Motor Company, characterized by its sleek, aerodynamic design, with a high-performance tires suitable for diesel and aerodynamics. The car is equipped with a low-profile tires, which suggests it is designed for high-speed racing. The tires are marked with red and white markings, indicating a slightly rapid trajectory. The sky is clear with a soft gradient from light blue to orange near the horizon, suggesting either dawn or dusk. The racing has a modern design, with a prominent grille and side mirrors, which are characteristic of Motor Company's racing team. There are no visible race or other people in the immediate vicinity of the car. The car is on a track, indicating its position as a driver, and the background features a crowd of spectators, indicating the location might be in a competitive or high-speed racing area.</td>
+      <td>The image depicts a dynamic scene at what appears to be a Formula One race car. The car is a two-person turbo-drive, indicated by the slight blur on the wheels, which suggests it is moving from left to right. The driver is wearing a full-face helmet with a visor, a white grille with a red and black design, and a red and black stripe on the left side of the front wheel. The car is sporty, with a sleek design, and is in motion, as indicated by the blur of the background. The background features a high-speed turn signal at the front, which is likely the car's trackside. The sky is clear with a few scattered clouds, suggesting the sun is either in the sky or the sun is low in the sky. There are no people visible in the image, focusing the attention solely on the driver and the car.</td>
     </tr>
   </tbody>
 </table>
 
 ### Effect Summary:
 
-Both models can identify the primary subject in most images (dog, umbrella, bicycle, sports car, superhero, racecar, etc.), but both exhibit repetitive phrasing and hallucinated details, placing overall performance at a stage of "understanding the gist but inaccurate on details".
+Both models correctly identify the primary subject across all 6 samples (dog, umbrella, bicycle, sports car, superhero, racecar) with 6/6 subject recognition, though both still exhibit some repetitive phrasing and hallucinated details, placing overall performance at a stage of "understanding the gist but inaccurate on details".
 
-Across these 6 samples, the MoE variant produces slightly richer scene descriptions and better color recognition (e.g. the cherry-blossom scene, rainbow umbrella, yellow sports car), while the Dense model tends to be more concise. Over a broader evaluation set, however, MoE occasionally suffers from more pronounced entity-level hallucinations or repetitive generation, showing higher variance than Dense — making Dense the safer default configuration.
+The MoE variant produces richer scene descriptions with better capture of background environments (urban streets, city skylines, sunset gradients) and object details (rainbow patterns, blue-red suit colors, racecar livery). The Dense model tends to be more concise with less repetition. Both exhibit similar levels of hallucination, with occasional inaccuracies in local details.
 
 Visual signals act as a special "foreign language" to the LLM, so the ceiling of "learning that language" is bounded by the LLM's own language ability. A stronger backbone extracts more value from the same image-text data; swapping MiniMind-V's backbone for a several-B-scale LLM yields clearly sharper details and more coherent reasoning.
 

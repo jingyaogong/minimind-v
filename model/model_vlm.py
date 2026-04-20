@@ -21,28 +21,22 @@ class VLMConfig(MiniMindConfig):
         super().__init__(**kwargs)
 
 class MMVisionProjector(nn.Module):
-    def __init__(self, in_dim, out_dim, source_tokens=256, target_tokens=64):
+    def __init__(self, in_dim, out_dim, source_tokens=64, target_tokens=64):
         super().__init__()
-        self.target_tokens = target_tokens
-        self.merge = source_tokens // target_tokens
         self.mlp = nn.Sequential(
-            nn.LayerNorm(in_dim * self.merge),
-            nn.Linear(in_dim * self.merge, out_dim),
+            nn.LayerNorm(in_dim),
+            nn.Linear(in_dim, out_dim),
             nn.GELU(),
             nn.Linear(out_dim, out_dim),
         )
     def forward(self, x):
-        b, n, d = x.shape
-        side = int(n ** 0.5)
-        s = int(self.merge ** 0.5)
-        x = x.view(b, side // s, s, side // s, s, d).permute(0, 1, 3, 2, 4, 5).reshape(b, self.target_tokens, d * self.merge)
         return self.mlp(x)
 
 # 继承自语言模型
 class MiniMindVLM(MiniMindForCausalLM):
     config_class = VLMConfig
 
-    def __init__(self, config: VLMConfig = None, vision_model_path="./model/siglip2-base-p16-256-ve"):
+    def __init__(self, config: VLMConfig = None, vision_model_path="./model/siglip2-base-p32-256-ve"):
         self.config = config or VLMConfig()
         super().__init__(self.config)
         self.vision_encoder, self.processor = self.__class__.get_vision_model(vision_model_path)

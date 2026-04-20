@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore', category=UserWarning)
 def convert_torch2transformers_minimind(torch_path, transformers_path, dtype=torch.bfloat16):
     VLMConfig.register_for_auto_class()
     MiniMindVLM.register_for_auto_class("AutoModelForCausalLM")
-    lm_model = MiniMindVLM(lm_config, vision_model_path="../model/siglip2-base-p16-256-ve")
+    lm_model = MiniMindVLM(lm_config, vision_model_path="../model/siglip2-base-p32-256-ve")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     state_dict = torch.load(torch_path, map_location=device)
     lm_model.load_state_dict(state_dict, strict=False)
@@ -47,7 +47,7 @@ def convert_transformers2torch(transformers_path, torch_path):
 
 
 if __name__ == '__main__':
-    lm_config = VLMConfig(hidden_size=768, num_hidden_layers=8, max_seq_len=8192, use_moe=False)
+    lm_config = VLMConfig(hidden_size=768, num_hidden_layers=8, max_seq_len=8192, use_moe=True)
     torch_path = f"../out/sft_vlm_{lm_config.hidden_size}{'_moe' if lm_config.use_moe else ''}.pth"
-    transformers_path = '../minimind-3v'
+    transformers_path = '../minimind-3v-moe'
     convert_torch2transformers_minimind(torch_path, transformers_path)
