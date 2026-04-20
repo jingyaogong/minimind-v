@@ -83,18 +83,18 @@ cd scripts && python web_demo_vlm.py
 
 ### Single Image Dialogue Examples
 
-**Test Image 1: Pizza**
+**Test Image 1: Golden Dog with Balloons**
 
 ```text
-Q: Describe the content of this image
-A: The image depicts a delicious pizza with fresh toppings on a wooden board...
+Q: Please illustrate the image through your words.
+A: The image shows a golden-brown dog in a park setting with a clear blue sky above...
 ```
 
-**Test Image 2: Snow Mountain**
+**Test Image 2: Yellow Sports Car**
 
 ```text
-Q: Describe the content of this image
-A: The image shows a beautiful snow-capped mountain reflected in a calm lake...
+Q: Please illustrate the image through your words.
+A: The image shows a yellow sports car positioned on a road with a clear blue sky...
 ```
 
 ### Model Performance
@@ -143,7 +143,7 @@ MiniMind-V adds Visual Encoder and Projection layers on top of the MiniMind lang
    - Output: up to 256×768 dimensional visual tokens
 
 2. **Projection Layer**
-   - Reshape (concat 4 adjacent tokens: 256×768 → 64×3072) + 2-layer MLP to 64 visual tokens
+   - LayerNorm + 2D pixel-shuffle reshape (256×768 → 64×3072) + 2-layer MLP to 64 visual tokens
    - Aligns visual tokens to text embedding space
 
 3. **Language Model (MiniMind)**

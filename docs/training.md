@@ -15,11 +15,11 @@ Create `./dataset` directory and place data files:
 
 ```bash
 ./dataset/
-├── pretrain_i2t.parquet           # Pretrain data (~1.13M samples)
-├── sft_i2t.parquet                # SFT data (~580K samples: ~236K i2t + ~346K t2t)
+├── pretrain_i2t.parquet           # Pretrain data (~1.27M samples)
+├── sft_i2t.parquet                # SFT data (~2.9M samples, includes Pretrain as subset)
 ├── eval_images/                   # Test images
-│   ├── pizza-on-wooden-board.jpg
-│   ├── snow-mountain-lake-view.jpg
+│   ├── image-01-golden-dog-balloons.jpg
+│   ├── image-02-rainbow-umbrella-street.jpg
 │   └── ...
 ```
 
@@ -59,13 +59,18 @@ image_bytes: <binary image data>
 
 ### 3. Data Source
 
-- **Pretrain Data**: [Chinese-LLaVA-Vision](https://huggingface.co/datasets/LinkSoul/Chinese-LLaVA-Vision-Instructions)
-  - Approximately 570,000 images from CC-3M and COCO 2014
+All image-text data come from the [ALLaVA-4V](https://huggingface.co/datasets/FreedomIntelligence/ALLaVA-4V) family, natively paired in Chinese and English.
+
+- **Pretrain Data** (`pretrain_i2t.parquet`, ~1.27M rows / ~640K unique images)
+  - `ALLaVA-Caption-LAION-4V` en/zh + `ALLaVA-Caption-VFLAN-4V` en/zh
+  - Single-turn caption descriptions for basic visual-to-language alignment
   
-- **SFT Data**: [llava-en-zh-300k](https://huggingface.co/datasets/BUAADreamer/llava-en-zh-300k) + [LLaVA-SFT-665K](https://huggingface.co/datasets/csuhan/LLaVA-SFT-665K)
-  - 300K + 665K instruction fine-tuning data
-  - Contains both Chinese and English data
-  - Translated content, better Chinese support
+- **SFT Data** (`sft_i2t.parquet`, ~2.90M rows / ~650K unique images)
+  - `ALLaVA-Instruct-LAION-4V` en/zh + `ALLaVA-Instruct-VFLAN-4V` en/zh
+  - Synthesized instructions by Gemini/Claude (~50K) + GPT-4o iterative (~50K)
+  - Pure-text conversations (~230K, with 8×8 black placeholder images)
+  - **Full Pretrain caption data merged in** (~1.27M)
+  - Pretrain stage can be skipped entirely (SFT has absorbed it as a subset)
 
 ## 🎯 Training Pipeline
 
@@ -98,17 +103,15 @@ python trainer/train_pretrain_vlm.py --epochs 4 --from_resume 1
 **Output weights**: `./out/pretrain_vlm_*.pth` (* is the model dimension, default is 768)
 
 !!! info "Training Duration"
-    - minimind-3v (67M): ~1h (single 3090)
-    - minimind-3v-moe (201M-A67M): ~3h (single 3090)
+    Pretrain data volume is ~45% of SFT's, so one epoch can be roughly scaled by that ratio.
 
 **Training Strategy**:
 - Freeze Visual Encoder (SigLIP2 model) gradients
-- Freeze LLM main parameters (only layer 0 learnable via `--freeze_llm 1`)
-- Only train Vision Projection layer
+- Fully freeze LLM, train only Projection (`--freeze_llm 2`, Pretrain default)
 
 **Key Parameters**:
 - `--from_weight llm`: Start from LLM weights
-- `--freeze_llm 1`: Freeze LLM parameters, unfreeze layer 0 (pretrain only)
+- `--freeze_llm 2`: Freeze LLM parameters, train only Projection (pretrain default)
 - `--from_resume 1`: Resume from checkpoint
 - `--save_weight pretrain_vlm`: Save weight prefix name
 
@@ -134,13 +137,13 @@ python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
 **Output weights**: `./out/sft_vlm_*.pth`
 
 !!! info "Training Duration"
-    - minimind-3v (67M): ~1h (single 3090)
-    - minimind-3v-moe (201M-A67M): ~3h (single 3090)
+    - minimind-3v (67M): ~2h per epoch (single 3090)
+    - Dense and MoE finish in similar time (activated parameters on the same order)
 
 **Training Strategy**:
 - Freeze Visual Encoder (SigLIP2 model) gradients
 - Train Vision Projection layer (all parameters learnable)
-- Train LLM (all parameters learnable)
+- Unfreeze first + last LLM layers (`--freeze_llm 1`, SFT default), keep middle layers frozen
 
 **Key Parameters**:
 - `--from_weight pretrain_vlm`: Start from pretrain weights
@@ -193,7 +196,7 @@ MiniMind-V's structure only adds Visual Encoder and feature projection submodule
    - Output: up to 256×768 dimensional features
 
 2. **Projection Layer**
-   - Reshape: concat 4 adjacent tokens (256×768 → 64×3072)
+   - LayerNorm + 2D pixel-shuffle reshape: concat 4 adjacent tokens (256×768 → 64×3072)
    - 2-layer MLP (Linear→GELU→Linear): project to LLM hidden dimension
    - Result: 64 visual tokens aligned to text embedding space
 
@@ -283,12 +286,12 @@ You can specify the project name and run name by modifying `wandb_project` and `
 Based on single NVIDIA 3090:
 
 | Dataset Combination | Training Time | Cost (Approx.) | Effect |
-|---------------------|---------------|----------------|---------|
-| pretrain (1 epoch) + sft (1 epoch) | 2h | ≈1.3 RMB | 😊😊😊 Basic dialogue |
-| pretrain (4 epochs) + sft (4 epochs) | 8h | ≈5.4 RMB | 😊😊😊😊😊 Better effect |
+|---------------------|---------------|----------------|--------|
+| sft (1 epoch, Pretrain included as subset) | ~2h | ≈2.6 RMB | 😊😊😊😊 Good dialogue |
+| pretrain (1 epoch) + sft (1 epoch) | ~3h | ≈4 RMB | 😊😊😊😊😊 Better convergence |
 
 !!! success "Quick Reproduction"
-    Using single epoch of pretrain and SFT, single 3090 only needs **2 hours + 1.3 RMB** to train a vision-language ChatBot!
+    Single 3090 only needs **~2 hours + ~2.6 RMB** to train a vision-language ChatBot!
 
 ## 📝 Training Tips
 
