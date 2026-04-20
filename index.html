@@ -528,7 +528,7 @@
     <!-- Title Section -->
     <div class="title-section">
         <p class="tagline pixel-font">
-            Train a 67M Vision-Language Model from zero.<br/>
+            Train a 65M Vision-Language Model from zero.<br/>
             2 hours. ¥2.6. One 3090.<br/>
             See the World.
         </p>
@@ -537,7 +537,7 @@
     <!-- Key Stats -->
     <div class="stats-section">
         <div class="stat-box">
-            <h3>67M</h3>
+            <h3>65M</h3>
             <p>Parameters</p>
         </div>
         <div class="stat-box">
@@ -598,13 +598,13 @@
             <tbody>
                 <tr>
                     <td><strong>minimind-3v-moe</strong></td>
-                    <td>202M-A67M</td>
+                    <td>200M-A65M</td>
                     <td>1.0 GB</td>
                     <td>2026.04.20</td>
                 </tr>
                 <tr>
                     <td><strong>minimind-3v</strong></td>
-                    <td>67M</td>
+                    <td>65M</td>
                     <td>0.5 GB</td>
                     <td>2026.04.20</td>
                 </tr>
@@ -634,9 +634,9 @@
             </div>
             <div class="changelog-content">
                 <ul>
-                    <li>New checkpoints: minimind-3v (67M) / minimind-3v-moe (201M-A67M)</li>
-                    <li>Projector: added LayerNorm, token merging switched to 2D pixel-shuffle</li>
-                    <li>Vision Encoder switched to SiglipVisionModel (fixed 256×256)</li>
+                    <li>New checkpoints: minimind-3v (65M) / minimind-3v-moe (200M-A65M)</li>
+                    <li>Projector: added LayerNorm, removed reshape token merging (P32 natively outputs 64 tokens)</li>
+                    <li>Vision Encoder switched to SiglipVisionModel (P32, fixed 256×256)</li>
                     <li>Training data moved to ALLaVA-4V (Pretrain 1.27M / SFT 2.9M, merged into single-stage SFT)</li>
                     <li>Freeze strategy: freeze_llm=1 unfreezes first + last layers; Pretrain/SFT defaults now 2/1; max_seq_len 360 → 450</li>
                     <li>Misc bugfixes and small tweaks</li>
@@ -653,7 +653,7 @@
                 <ul>
                     <li>Added minimind-3v (67M) and minimind-3v-moe (201M-A67M) models</li>
                     <li>Unified 768+8 architecture, supporting both dense and moe modes</li>
-                    <li>Switched Visual Encoder from CLIP to SigLIP2 (siglip2-base-p16-ve)</li>
+                    <li>Switched Visual Encoder from CLIP to SigLIP2 (siglip2-base-p16-256-ve)</li>
                     <li>Replaced QFormer with MLP Projection + reshape compression</li>
                     <li>Dataset format updated to parquet, mixed data sources, updated tokenizer with image placeholder &lt;|image_pad|&gt;, new WebUI with dynamic model directory scanning and dropdown model switching</li>
                     <li>Model code refactored, LLM/VLM unified for Transformers format</li>
