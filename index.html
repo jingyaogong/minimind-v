@@ -529,7 +529,7 @@
     <div class="title-section">
         <p class="tagline pixel-font">
             Train a 67M Vision-Language Model from zero.<br/>
-            1 hour. ¥1.3. One 3090.<br/>
+            2 hours. ¥2.6. One 3090.<br/>
             See the World.
         </p>
     </div>
@@ -541,11 +541,11 @@
             <p>Parameters</p>
         </div>
         <div class="stat-box">
-            <h3>1h</h3>
+            <h3>2h</h3>
             <p>Training</p>
         </div>
         <div class="stat-box">
-            <h3>¥1.3</h3>
+            <h3>¥2.6</h3>
             <p>Cost</p>
         </div>
         <div class="stat-box">
@@ -600,13 +600,13 @@
                     <td><strong>minimind-3v-moe</strong></td>
                     <td>202M-A67M</td>
                     <td>1.0 GB</td>
-                    <td>2026.04.01</td>
+                    <td>2026.04.20</td>
                 </tr>
                 <tr>
                     <td><strong>minimind-3v</strong></td>
                     <td>67M</td>
                     <td>0.5 GB</td>
-                    <td>2026.04.01</td>
+                    <td>2026.04.20</td>
                 </tr>
                 <tr>
                     <td><strong>MiniMind2-V</strong></td>
@@ -629,8 +629,25 @@
     <div class="changelog-section">
         <div class="changelog-item open">
             <div class="changelog-header open" onclick="toggleChangelog(this)">
-                <span>🎉 2026-04-01 (Latest)</span>
+                <span>🎉 2026-04-20 (Latest)</span>
                 <span class="toggle-icon">−</span>
+            </div>
+            <div class="changelog-content">
+                <ul>
+                    <li>New checkpoints: minimind-3v (67M) / minimind-3v-moe (201M-A67M)</li>
+                    <li>Projector: added LayerNorm, token merging switched to 2D pixel-shuffle</li>
+                    <li>Vision Encoder switched to SiglipVisionModel (fixed 256×256)</li>
+                    <li>Training data moved to ALLaVA-4V (Pretrain 1.27M / SFT 2.9M, merged into single-stage SFT)</li>
+                    <li>Freeze strategy: freeze_llm=1 unfreezes first + last layers; Pretrain/SFT defaults now 2/1; max_seq_len 360 → 450</li>
+                    <li>Misc bugfixes and small tweaks</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="changelog-item">
+            <div class="changelog-header" onclick="toggleChangelog(this)">
+                <span>🛠️ 2026-04-01</span>
+                <span class="toggle-icon">+</span>
             </div>
             <div class="changelog-content">
                 <ul>
@@ -766,8 +783,8 @@
     <!-- Footer -->
     <div class="footer">
         <p>
-            "1 hour" based on testing (1 epoch) with NVIDIA 3090 (single GPU).<br/>
-            "¥1.3" refers to GPU server rental costs.<br/>
+            "2 hours" based on testing (1 epoch) with NVIDIA 3090 (single GPU).<br/>
+            "¥2.6" refers to GPU server rental costs.<br/>
             Apache-2.0 License · 
             <a href="https://github.com/jingyaogong/minimind-v">GitHub</a>
         </p>
