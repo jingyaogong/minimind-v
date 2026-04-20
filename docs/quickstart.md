@@ -29,9 +29,9 @@ cd minimind-v
 
 ```bash
 # Download SigLIP2 model to ./model directory
-git clone https://huggingface.co/jingyaogong/siglip2-base-p16-ve
+git clone https://huggingface.co/jingyaogong/siglip2-base-p32-256-ve
 # or
-git clone https://modelscope.cn/models/gongjy/siglip2-base-p16-ve
+git clone https://modelscope.cn/models/gongjy/siglip2-base-p32-256-ve
 ```
 
 ### Step 1: Install Dependencies
@@ -101,8 +101,8 @@ A: The image shows a yellow sports car positioned on a road with a clear blue sk
 
 | Model | Parameters | Inference Speed | Image Understanding |
 |-------|-----------|-----------------|---------------------|
-| minimind-3v-moe | 201M-A67M | Fast | 😊😊😊😊😊😊 |
-| minimind-3v | 67M | Very Fast | 😊😊😊😊😊 |
+| minimind-3v-moe | 200M-A65M | Fast | 😊😊😊😊😊😊 |
+| minimind-3v | 65M | Very Fast | 😊😊😊😊😊 |
 
 ## 🔧 Loading from PyTorch Weights
 
@@ -138,12 +138,12 @@ MiniMind-V adds Visual Encoder and Projection layers on top of the MiniMind lang
 ### Core Components
 
 1. **Visual Encoder (SigLIP2)**
-   - Uses `siglip2-base-p16-ve` model
-   - Based on SigLIP2 NaFlex processor
-   - Output: up to 256×768 dimensional visual tokens
+   - Uses `siglip2-base-p32-256-ve` model
+   - Based on ViT-B/32 architecture
+   - Output: 64×768 dimensional visual tokens (256×256 image / patch_size 32 = 8×8 = 64)
 
 2. **Projection Layer**
-   - LayerNorm + 2D pixel-shuffle reshape (256×768 → 64×3072) + 2-layer MLP to 64 visual tokens
+   - LayerNorm + 2-layer MLP (Linear→GELU→Linear): projects 64 visual tokens to LLM hidden dimension
    - Aligns visual tokens to text embedding space
 
 3. **Language Model (MiniMind)**
@@ -154,8 +154,8 @@ MiniMind-V adds Visual Encoder and Projection layers on top of the MiniMind lang
 
 | Model Name | Params | d_model | n_layers | kv_heads | q_heads | MoE |
 |-----------|--------|---------|----------|----------|---------|-----|
-| minimind-3v | 67M | 768 | 8 | 4 | 8 | No |
-| minimind-3v-moe | 201M-A67M | 768 | 8 | 4 | 8 | Yes |
+| minimind-3v | 65M | 768 | 8 | 4 | 8 | No |
+| minimind-3v-moe | 200M-A65M | 768 | 8 | 4 | 8 | Yes |
 
 ## 🎯 Next Steps
 
@@ -174,7 +174,7 @@ Ensure all dependency files are downloaded:
 
 ### 2. Out of memory?
 
-- Use the 67M dense version
+- Use the 65M dense version
 - Reduce batch size
 - Use CPU inference (slower)
 

@@ -7,7 +7,7 @@
 
 ## 📌 Introduction
 
-MiniMind-V is a super-small multimodal vision-language model project trained completely from scratch, requiring **only ~2.6 RMB + 2 hours** to train a **67M** parameter vision-language model!
+MiniMind-V is a super-small multimodal vision-language model project trained completely from scratch, requiring **only ~2.6 RMB + 2 hours** to train a **65M** parameter vision-language model!
 
 - **MiniMind-V** series is extremely lightweight, the smallest version is **1/2600** the size of GPT-3
 - **MiniMind-V** is an extension of the visual capabilities of the [MiniMind](https://github.com/jingyaogong/minimind) pure language model
@@ -33,8 +33,8 @@ MiniMind-V is a super-small multimodal vision-language model project trained com
 
 | Model (Size)            | Inference Memory (Approx.) | Release    |
 |------------------------|----------------------------|------------|
-| minimind-3v-moe (201M-A67M) | 1.0 GB                | 2026.04.20 |
-| minimind-3v (67M)      | 0.5 GB                     | 2026.04.20 |
+| minimind-3v-moe (200M-A65M) | 1.0 GB                | 2026.04.20 |
+| minimind-3v (65M)      | 0.5 GB                     | 2026.04.20 |
 | MiniMind2-V (104M)     | 1.1 GB                     | 2025.02.20 |
 | MiniMind2-Small-V (26M) | 0.6 GB                    | 2025.02.20 |
 | minimind-v-v1-small (27M) | 0.6 GB                  | 2024.10.04 |
@@ -71,14 +71,14 @@ Now, let's explore the answers and feel the joy of creation together!
 A Vision-Language Model is a multimodal model that can understand both images and text simultaneously. MiniMind-V achieves this through:
 
 1. Using a **Visual Encoder** (SigLIP2 model) to convert images into feature vectors
-2. Aligning visual and text feature spaces through a **Projection layer** (LayerNorm + reshape + MLP)
+2. Aligning visual and text feature spaces through a **Projection layer** (LayerNorm + MLP)
 3. Injecting image features into the language model to enable image-text understanding
 
 ### MiniMind-V Design Philosophy
 
 - **Minimal modifications**: Based on the MiniMind language model, only adding Visual Encoder and Projection submodules
 - **Core algorithm changes < 50 lines**: Extremely low migration difficulty
-- **Simple yet effective**: Uses LayerNorm + reshape + MLP Projection for cross-modal alignment, simple but effective
+- **Simple yet effective**: Uses LayerNorm + MLP Projection for cross-modal alignment, simple but effective
 
 ## 🎓 Target Audience
 

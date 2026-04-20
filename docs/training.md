@@ -137,7 +137,7 @@ python trainer/train_sft_vlm.py --epochs 4 --from_resume 1
 **Output weights**: `./out/sft_vlm_*.pth`
 
 !!! info "Training Duration"
-    - minimind-3v (67M): ~2h per epoch (single 3090)
+    - minimind-3v (65M): ~2h per epoch (single 3090)
     - Dense and MoE finish in similar time (activated parameters on the same order)
 
 **Training Strategy**:
@@ -190,14 +190,13 @@ MiniMind-V's structure only adds Visual Encoder and feature projection submodule
 ### Core Components
 
 1. **Visual Encoder**
-   - Uses [siglip2-base-p16-ve](https://huggingface.co/jingyaogong/siglip2-base-p16-ve)
-   - Based on ViT-B/16 architecture
-   - Patch size: 16×16
-   - Output: up to 256×768 dimensional features
+   - Uses [siglip2-base-p32-256-ve](https://huggingface.co/jingyaogong/siglip2-base-p32-256-ve)
+   - Based on ViT-B/32 architecture
+   - Patch size: 32×32
+   - Output: 64×768 dimensional features (256×256 image / patch_size 32 = 8×8 = 64)
 
 2. **Projection Layer**
-   - LayerNorm + 2D pixel-shuffle reshape: concat 4 adjacent tokens (256×768 → 64×3072)
-   - 2-layer MLP (Linear→GELU→Linear): project to LLM hidden dimension
+   - LayerNorm + 2-layer MLP (Linear→GELU→Linear): projects 64 visual tokens to LLM hidden dimension
    - Result: 64 visual tokens aligned to text embedding space
 
 3. **Language Model**
@@ -214,7 +213,7 @@ In `minimind-v`, 64 `<|image_pad|>` tokens are used as placeholders to replace t
 <|image_pad|><|image_pad|>...<|image_pad|>(×64)\nWhat is this image describing?
 ```
 
-Why 64 tokens? Because 256 SigLIP2 patch features are compressed to 64 tokens via reshape (concat 4 adjacent tokens) + MLP projection.
+Why 64 tokens? SigLIP2 P32 natively outputs 64 patch tokens (256×256 image / patch_size 32 = 8×8 = 64), which are then projected to LLM hidden dimension via the MLP.
 
 ![Input Mechanism](images/minimind-v-input.jpg)
 
@@ -226,8 +225,8 @@ Achieved by injecting multiple `<image>` placeholders, no framework modification
 
 | Model Name | Params | d_model | n_layers | kv_heads | q_heads | Visual Token |
 |-----------|--------|---------|----------|----------|---------|--------------|
-| minimind-3v | 67M | 768 | 8 | 4 | 8 | 64×768 |
-| minimind-3v-moe | 201M-A67M | 768 | 8 | 4 | 8 | 64×768 |
+| minimind-3v | 65M | 768 | 8 | 4 | 8 | 64×768 |
+| minimind-3v-moe | 200M-A65M | 768 | 8 | 4 | 8 | 64×768 |
 
 ## 🧪 Test Model
 
@@ -368,7 +367,7 @@ SigLIP2 is already a powerful pre-trained visual encoder. Freezing its parameter
 
 - **Base Language Model**: [MiniMind](https://github.com/jingyaogong/minimind)
 - **Reference Paper**: [LlaVA](https://arxiv.org/pdf/2304.08485)
-- **Visual Encoder**: [SigLIP2](https://huggingface.co/jingyaogong/siglip2-base-p16-ve)
+- **Visual Encoder**: [SigLIP2](https://huggingface.co/jingyaogong/siglip2-base-p32-256-ve)
 
 ## ❓ Common Issues
 
