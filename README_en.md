@@ -64,14 +64,14 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 > (As of 2026-04-20) The MiniMind-V series has completed the training of the following model versions, with the smallest
 > requiring only 65M (0.065B) parameters, capable of both image recognition and conversation!
 
-| Model (Size) | Release |
-|---|---|
-| minimind-3v-moe (200M-A65M) | 2026.04.20 |
-| minimind-3v (65M) | 2026.04.20 |
-| MiniMind2-V (104M) | 2025.02.20 |
-| MiniMind2-Small-V (26M) | 2025.02.20 |
-| minimind-v-v1-small (27M) | 2024.10.04 |
-| minimind-v-v1 (109M) | 2024.10.04 |
+| Model | Params | Release |
+|---|---|---|
+| minimind-3v-moe | 200M-A65M | 2026.04.20 |
+| minimind-3v | 65M | 2026.04.20 |
+| MiniMind2-V | 104M | 2025.02.20 |
+| MiniMind2-Small-V | 26M | 2025.02.20 |
+| minimind-v-v1-small | 27M | 2024.10.04 |
+| minimind-v-v1 | 109M | 2024.10.04 |
 
 ### 👉**Recent Updates**
 

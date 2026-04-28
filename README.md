@@ -61,14 +61,14 @@
 > [!TIP]
 > （截至2026-04-20）MiniMind-V 系列已完成了以下型号模型训练，最小仅需65M (0.065B)，即可具备识图和对话的能力！
 
-| 模型 (大小) | release |
-|---|---|
-| minimind-3v-moe (200M-A65M) | 2026.04.20 |
-| minimind-3v (65M) | 2026.04.20 |
-| MiniMind2-V (104M) | 2025.02.20 |
-| MiniMind2-Small-V (26M) | 2025.02.20 |
-| minimind-v-v1-small (27M) | 2024.10.04 |
-| minimind-v-v1 (109M) | 2024.10.04 |
+| 模型 | 参数量 | Release |
+|---|---|---|
+| minimind-3v-moe | 200M-A65M | 2026.04.20 |
+| minimind-3v | 65M | 2026.04.20 |
+| MiniMind2-V | 104M | 2025.02.20 |
+| MiniMind2-Small-V | 26M | 2025.02.20 |
+| minimind-v-v1-small | 27M | 2024.10.04 |
+| minimind-v-v1 | 109M | 2024.10.04 |
 
 #### 👉 更新日志
 
