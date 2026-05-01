@@ -36,8 +36,7 @@
   and 2 hours of work, starting from scratch!
 * The smallest version of **MiniMind-V** is only about $\frac{1}{2600}$ the size of GPT-3, designed to enable fast
   inference and even training on personal GPUs.
-* **MiniMind-V** is an extension of the visual capabilities of the [MiniMind](https://github.com/jingyaogong/minimind)
-  pure language model.
+* **MiniMind-V** is an extension of the visual capabilities of the [MiniMind](https://github.com/jingyaogong/minimind) pure language model; for the multimodal Omni model in the same family, see [MiniMind-O](https://github.com/jingyaogong/minimind-o).
 * The project includes full code for the minimalist structure of large VLM models, dataset cleaning, Pretrain, and SFT.
 * This is not only the smallest implementation of an open-source VLM model but also a concise tutorial for beginners in
   vision-language models.

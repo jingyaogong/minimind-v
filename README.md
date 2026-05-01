@@ -35,7 +35,7 @@
 
 * 此项目旨在从0开始，仅用3块钱成本 + 2小时！即可训练出65M参数的超小多模态视觉语言模型**MiniMind-V**。
 * **MiniMind-V**最小版本体积仅为 GPT3 的约 $\frac{1}{2600}$，力求做到个人GPU也可快速推理甚至训练。
-* **MiniMind-V**是[MiniMind](https://github.com/jingyaogong/minimind)纯语言模型的视觉能力额外拓展。
+* **MiniMind-V**是[MiniMind](https://github.com/jingyaogong/minimind)纯语言模型的视觉能力额外拓展，同系列多模态Omni模型详见[MiniMind-O](https://github.com/jingyaogong/minimind-o)。
 * 项目同时包含了VLM大模型的极简结构、数据集清洗、Pretrain、SFT等全过程代码。
 * 这不仅是一个开源VLM模型的最小实现，也是入门视觉语言模型的简明教程。
 * 希望此项目能为所有人提供一个抛砖引玉的示例，一起感受创造的乐趣！推动更广泛AI社区的进步！
