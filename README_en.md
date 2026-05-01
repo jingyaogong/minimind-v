@@ -136,148 +136,137 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 # 📌 Quick Start
 
 <details>
-<summary>Sharing my hardware and software configuration (for reference only)</summary>
+<summary>My software and hardware setup (for reference only)</summary>
 
 * CPU: Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
 * RAM: 128 GB
 * GPU: NVIDIA GeForce RTX 3090(24GB) * 8
 * Ubuntu==20.04
 * CUDA==12.2
-* Python==3.10.16
+* Python==3.10
 * [requirements.txt](./requirements.txt)
 
 </details>
 
-### Step 0
+## Step 0 (required)
+
+### 1' Environment setup
 
 ```bash
-# Clone the code repository
+# Clone the repository
 git clone --depth 1 https://github.com/jingyaogong/minimind-v
+# Install dependencies
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
+
+### 2' Download resources
 
 ```bash
-# Download the siglip2 model to the ./model directory
-git clone https://huggingface.co/jingyaogong/siglip2-base-p32-256-ve
-# or
-git clone https://modelscope.cn/models/gongjy/siglip2-base-p32-256-ve
+# Download the SigLIP2 vision encoder to ./model/siglip2-base-p32-256-ve
+modelscope download --model gongjy/siglip2-base-p32-256-ve --local_dir ./model/siglip2-base-p32-256-ve
+# Download the MiniMind language model weight to ./out (used as the base language model for VLM training)
+modelscope download --model gongjy/minimind-3v-pytorch llm_768.pth --local_dir ./out
 ```
+
+Alternatively, the same files can be selected from the [ModelScope Collection](https://modelscope.cn/collections/gongjy/MiniMind-V) or [HuggingFace Collection](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d) and downloaded with `git clone` (LFS required).
+
+The directory should look like this after the resources are ready:
+
+```text
+minimind-v/
+├── model/
+│   ├── siglip2-base-p32-256-ve/
+│   └── ...
+├── out/
+│   └── llm_768.pth
+└── ...
+```
+
+## Ⅰ 🚀 Model inference
+
+### 1' Download released weights
 
 ```bash
-# Download the minimind language model to the ./out directory (as the base language model for training VLM):
-# HuggingFace
-https://huggingface.co/jingyaogong/minimind-3v-pytorch/blob/main/llm_768.pth
-# Domestic source
-https://modelscope.cn/models/gongjy/minimind-3v-pytorch/resolve/master/llm_768.pth
+# Download released weights to ./out
+modelscope download --model gongjy/minimind-3v-pytorch --local_dir ./out
 ```
 
-
-## Ⅰ Test an existing model's performance
-
-### 1' Environment Preparation
-
-```bash
-pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
-```
-
-### 2' Download the model
-
-```bash
-git clone https://huggingface.co/jingyaogong/minimind-3v
-```
-
-### 3' Command-line Q&A
+### 2' Command-line Q&A
 
 ```bash
 # load_from='model': load native PyTorch weights, load_from='other path': load transformers format
 python eval_vlm.py --load_from model --weight sft_vlm
+```
 
-# Or use transformers format model
+If using a transformers-format model, download the model directory first:
+
+```bash
+git clone https://huggingface.co/jingyaogong/minimind-3v
 python eval_vlm.py --load_from minimind-3v
 ```
 
-### 4' Or start the WebUI
+### 3' Start WebUI (optional)
 
 ```bash
-# ⚠️ You must first copy the transformers model folder to the ./scripts/ directory (e.g.: cp -r minimind-3v ./scripts/minimind-3v). The web_demo_vlm script will automatically scan subdirectories containing weight files; it will report an error if none are found.
+# ⚠️ The transformers-format model directory must be copied to ./scripts/ first. web_demo_vlm scans subdirectories under ./scripts/ that contain weight files and reports an error if none are found.
+cp -r minimind-3v ./scripts/minimind-3v
 cd scripts && python web_demo_vlm.py
 ```
 
-## Ⅱ Train from scratch
+## Ⅱ 🛠️ Model training
 
-### 1' Environment Preparation
+<details style="color:rgb(128,128,128)">
+<summary>Note: test whether Torch can use CUDA</summary>
 
-```bash
-pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple
-```
-
-<details>
-<summary>Note: Test if Torch can use CUDA</summary>
-
-```bash
+```python
 import torch
 print(torch.cuda.is_available())
 ```
 
-If unavailable, download the whl file from [torch_stable](https://download.pytorch.org/whl/torch_stable.html) for
-installation. Refer
-to [this link](https://blog.csdn.net/weixin_45456738/article/details/141029610?ops_request_misc=&request_id=&biz_id=102&utm_term=%E5%AE%89%E8%A3%85torch&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-2-141029610.nonecase&spm=1018.2226.3001.4187)
-for help.
+If CUDA is unavailable, download the matching whl file from [torch_stable](https://download.pytorch.org/whl/torch_stable.html) and install it manually.
 
 </details>
 
-### 2' Download Data
+### 1' Download data
 
-Download the required content from the [dataset link](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset) 
-and place it under `./dataset`.
+For a quick start, download `sft_i2t.parquet` from the [dataset link](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset) and place it under `./dataset`.
 
-<details>
-<summary>Note: Dataset Details</summary>
+<details style="color:rgb(128,128,128)">
+<summary>Note: dataset details</summary>
 
-**[Note 1]** Previously, extracting 500k fragmented image files could be very slow. From 2025-12-27, dataset format is unified to Parquet with image-text integrated storage, smaller size, no decompression needed, faster loading.
+**[Note 1]** The older dataset required extracting 500k fragmented image files, which could be very slow. Since 2025-12-27, the dataset has been unified into Parquet with image and text stored together. It is smaller, requires no decompression, and loads faster.
 
-**[Note 2]** Parquet is a columnar storage format supporting efficient compression and fast reading. To preview data content, run `python lm_dataset.py` in the `dataset/` directory to visualize the first 5 image-text pairs.
+**[Note 2]** Parquet is a columnar storage format with efficient compression and fast reading. If it is unfamiliar, run `python lm_dataset.py` under `dataset/` to visualize the first 5 image-text pairs.
 
 Pretrain data (optional; contains caption subset only):
 ```bash
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_i2t.parquet
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_i2t.parquet -P ./dataset
 ```
 
-SFT data (required; contains full caption + instruct + text merge):
-```bash
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_i2t.parquet
-```
-
-The single `sft_i2t.parquet` file (2.9M rows) absorbs Pretrain as a subset, and after global dictionary encoding dedup it is only ~10% larger than the original SFT — enough to cover every training stage.
+The single `sft_i2t.parquet` file contains 2.9M rows and absorbs Pretrain as a subset. After global dictionary encoding deduplication, it is only ~10% larger than the original SFT file and is enough to cover every training stage. For quick reproduction, Pretrain can be skipped and SFT can be started directly.
 
 </details>
 
-### 3' Start Training
+### 2' Start training
 
-**3.1 Pretrain (optional)**
-
-> `sft_i2t.parquet` already contains the Pretrain data as a subset, so **this stage can be skipped** and you may go directly to SFT with `--from_weight llm`. If you prefer the Projector to be pre-aligned first and SFT to converge more stably, run a round of Pretrain separately.
+SFT is the recommended starting point. By default, `--freeze_llm 1` trains `vision_proj` and the first/last LLM layers while keeping the middle layers' original language ability:
 
 ```bash
-# Basic training command (start from LLM weights, train vision_proj only)
-python train_pretrain_vlm.py --epochs 2 --from_weight llm
+python train_sft_vlm.py --epochs 2 --from_weight llm
 ```
 
-> Run Pretrain to get `pretrain_vlm_*.pth` as the Pretrain output weights (* is the model dimension, default 768).
-
-**3.2 SFT (required)**
+If the Projector should be aligned on image-text pairs before SFT, run Pretrain first:
 
 ```bash
-# Basic command (default --freeze_llm 1: unfreeze proj + first/last LLM layers, keep middle layers' original LLM weights)
-# If 3.1 was run: --from_weight pretrain_vlm; if Pretrain was skipped: --from_weight llm
+python train_pretrain_vlm.py --epochs 2 --from_weight llm
 python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
-> Run SFT to get `sft_vlm_*.pth` as the SFT output weights.
+After training, `sft_vlm_*.pth` will be written under `out/` as the SFT weight.
 
-<details>
-<summary>Note: Training Details</summary>
+<details style="color:rgb(128,128,128)">
+<summary>Note: training details</summary>
 
-**Training Features:**
 - Support checkpoint resumption: add `--from_resume 1` parameter to continue from last interruption
 - Support GPU count changes: automatically convert steps when GPU count changes during resumption
 - Atomic saving: use temporary file + replacement mechanism to prevent weight corruption from interruption
@@ -297,9 +286,7 @@ python train_sft_vlm.py --epochs 4 --from_resume 1
 
 </details>
 
----
-
-### 4' Test the Model's Performance
+### 3' Test a trained model (optional)
 
 Ensure that the model `*.pth` file you want to test is located in the `./out/` directory.
 You can also directly download the pre-trained `*.pth` file

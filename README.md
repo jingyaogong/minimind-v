@@ -141,139 +141,130 @@
 * GPU: NVIDIA GeForce RTX 3090(24GB) * 8
 * Ubuntu==20.04
 * CUDA==12.2
-* Python==3.10.16
+* Python==3.10
 * [requirements.txt](./requirements.txt)
 
 </details>
 
-### 第0步
-
-```bash
-# 克隆代码仓库
-git clone --depth 1 https://github.com/jingyaogong/minimind-v
-```
-
-```bash
-# 下载siglip2模型到 ./model 目录下
-git clone https://huggingface.co/jingyaogong/siglip2-base-p32-256-ve
-# 或
-git clone https://modelscope.cn/models/gongjy/siglip2-base-p32-256-ve
-```
-
-```bash
-# 下载minimind语言模型权重到 ./out 目录下（作为训练VLM的基座语言模型）
-# HuggingFace
-https://huggingface.co/jingyaogong/minimind-3v-pytorch/blob/main/llm_768.pth
-# 国内源
-https://modelscope.cn/models/gongjy/minimind-3v-pytorch/resolve/master/llm_768.pth
-```
-
-## Ⅰ 测试已有模型效果
+## 第0步（必须）
 
 ### 1' 环境准备
 
 ```bash
+# 克隆仓库代码
+git clone --depth 1 https://github.com/jingyaogong/minimind-v
+# 安装必要依赖
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-### 2' 下载模型
+### 2' 下载资源
 
 ```bash
-git clone https://huggingface.co/jingyaogong/minimind-3v
+# 下载 SigLIP2 视觉编码器到 ./model/siglip2-base-p32-256-ve
+modelscope download --model gongjy/siglip2-base-p32-256-ve --local_dir ./model/siglip2-base-p32-256-ve
+# 下载 MiniMind 语言模型权重到 ./out 目录下（作为训练 VLM 的基座语言模型）
+modelscope download --model gongjy/minimind-3v-pytorch llm_768.pth --local_dir ./out
 ```
 
-### 3' 命令行问答
+注：也可从 [ModelScope Collection](https://modelscope.cn/collections/gongjy/MiniMind-V) 或 [HuggingFace Collection](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d) 选择对应内容 `git clone`（需 LFS）下载，此处不再赘述。
+
+完成后，结构应如下：
+
+```text
+minimind-v/
+├── model/
+│   ├── siglip2-base-p32-256-ve/
+│   └── ...
+├── out/
+│   └── llm_768.pth
+└── ...
+```
+
+## Ⅰ 🚀 模型推理
+
+### 1' 下载发布权重
+
+```bash
+# 下载发布权重到 ./out 目录下
+modelscope download --model gongjy/minimind-3v-pytorch --local_dir ./out
+```
+
+### 2' 命令行问答
 
 ```bash
 # load_from='model': 加载原生PyTorch权重, load_from='其他路径': 加载transformers格式
 python eval_vlm.py --load_from model --weight sft_vlm
+```
 
-# 或使用transformers格式模型
+如果使用 transformers 格式模型，可先下载模型目录：
+
+```bash
+git clone https://huggingface.co/jingyaogong/minimind-3v
 python eval_vlm.py --load_from minimind-3v
 ```
 
-### 4' 启动WebUI（可选）
+### 3' 启动 WebUI（可选）
 
 ```bash
-# ⚠️ 须先将 transformers 格式模型文件夹复制到 ./scripts/ 目录下（例如：cp -r minimind-3v ./scripts/minimind-3v），web_demo_vlm 脚本会自动扫描该目录下包含权重文件的子文件夹，如不存在则报错
+# ⚠️ 须先将 transformers 格式模型文件夹复制到 ./scripts/ 目录下，web_demo_vlm 脚本会自动扫描该目录下包含权重文件的子文件夹，如不存在则报错
+cp -r minimind-3v ./scripts/minimind-3v
 cd scripts && python web_demo_vlm.py
 ```
 
-## Ⅱ 从0开始自己训练
+## Ⅱ 🛠️ 模型训练
 
-### 1' 环境准备
-
-```bash
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
-
-<details>
+<details style="color:rgb(128,128,128)">
 <summary>注：提前测试Torch是否可用cuda</summary>
 
-```bash
+```python
 import torch
 print(torch.cuda.is_available())
 ```
 
-如果不可用，请自行去[torch_stable](https://download.pytorch.org/whl/torch_stable.html)
-下载whl文件安装。参考[链接](https://blog.csdn.net/weixin_45456738/article/details/141029610?ops_request_misc=&request_id=&biz_id=102&utm_term=%E5%AE%89%E8%A3%85torch&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-2-141029610.nonecase&spm=1018.2226.3001.4187)
+如果不可用，请自行去 [torch_stable](https://download.pytorch.org/whl/torch_stable.html) 下载 whl 文件安装。
 
 </details>
 
-### 2' 数据下载
+### 1' 下载数据
 
-从下文提供的[数据集链接](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)
-下载所需内容并放到`./dataset`下。
+快速开始时，直接从[数据集链接](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)下载 `sft_i2t.parquet`，并放到 `./dataset` 下即可。
 
-<details>
+<details style="color:rgb(128,128,128)">
 <summary>注：数据集须知</summary>
 
-【注1】之前需解压50万零碎的图像文件可能非常慢。2025-12-27起，数据集格式统一为Parquet，图文一体化存储，体积更小，无需解压，加载更快。
+【注1】之前需解压50万零碎的图像文件可能非常慢。2025-12-27起，数据集格式统一为 Parquet，图文一体化存储，体积更小，无需解压，加载更快。
 
-【注2】Parquet是列式存储格式，支持高效压缩和快速读取。如果你对它感到陌生，可以预览数据内容，在`dataset/`目录下执行`python lm_dataset.py`可视化前5条图文对
+【注2】Parquet 是列式存储格式，支持高效压缩和快速读取。如果你对它感到陌生，可以预览数据内容，在 `dataset/` 目录下执行 `python lm_dataset.py` 可视化前5条图文对。
 
 Pretrain 数据（可选；仅包含 caption 子集）：
 ```bash
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_i2t.parquet
+wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/pretrain_i2t.parquet -P ./dataset
 ```
 
-SFT 数据（必须；包含 caption + instruct + 纯文本全量合并）：
-```bash
-wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/sft_i2t.parquet
-```
-
-SFT 单文件 290 万条已把 Pretrain 作为子集合并，经全局 dictionary encoding 去重后体积只比 SFT 原版多 ~10%，可覆盖所有训练阶段。
+SFT 单文件 290 万条已把 Pretrain 作为子集合并，经全局 dictionary encoding 去重后体积只比 SFT 原版多 ~10%，可覆盖所有训练阶段。因此快速复现时可以跳过 Pretrain，直接进入 SFT。
 
 </details>
 
-### 3' 开始训练
+### 2' 开始训练
 
-**3.1 Pretrain（可选）**
-
-> SFT 数据集 `sft_i2t.parquet` 已把 Pretrain 数据作为子集合并进来，**此阶段可跳过**，直接 `--from_weight llm` 进入 SFT 即可；若想让 Projector 提前完成对齐、SFT 收敛更稳，可以提前执行 Pretrain。
+推荐直接执行 SFT。默认 `--freeze_llm 1`，即训练 `vision_proj` 和 LLM 首尾层，保留中间层原有语言能力：
 
 ```bash
-# 基础训练命令（从LLM权重开始，仅训练 vision_proj）
-python train_pretrain_vlm.py --epochs 2 --from_weight llm
+python train_sft_vlm.py --epochs 2 --from_weight llm
 ```
 
-> 执行 Pretrain，得到 `pretrain_vlm_*.pth` 作为 Pretrain 的输出权重（其中*为模型的dimension，默认为768）
-
-
-**3.2 SFT（必须）**
+如果希望让 Projector 先完成一轮图文对齐，再进入 SFT，可额外执行 Pretrain：
 
 ```bash
-# 基础训练命令（默认 --freeze_llm 1：解冻 proj + LLM 首尾层，保留中间层原 LLM 知识）
-# 若已执行 3.1：--from_weight pretrain_vlm；若跳过 Pretrain：--from_weight llm
+python train_pretrain_vlm.py --epochs 2 --from_weight llm
 python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
-> 执行 SFT，得到 `sft_vlm_*.pth` 作为 SFT 的输出权重
+执行完成后，`out/` 下会生成 `sft_vlm_*.pth` 作为 SFT 权重。
 
-<details>
+<details style="color:rgb(128,128,128)">
 <summary>注：训练须知</summary>
 
-**训练特性：**
 - 支持断点续训：添加`--from_resume 1`参数可从上次中断处继续训练
 - 支持GPU数量变化：续训时GPU数量改变会自动转换step
 - 原子性保存：使用临时文件+替换机制，防止保存过程中断导致权重损坏
@@ -293,12 +284,9 @@ python train_sft_vlm.py --epochs 4 --from_resume 1
 
 </details>
 
+### 3' 测试已训练模型（可选）
 
----
-
-### 4' 测试模型效果
-
-确保需要测试的模型`*.pth`文件位于`./out/`目录下。
+确保需要测试的模型 `*.pth` 文件位于 `./out/` 目录下。
 也可以直接去[此处](https://huggingface.co/jingyaogong/minimind-3v-pytorch)下载使用我训练的`*.pth`文件。
 
 ```bash
@@ -312,7 +300,7 @@ python eval_vlm.py --weight pretrain_vlm
 ---
 
 > [!TIP]
-> 训练脚本均为 PyTorch 原生框架，均支持多卡加速，假设你的设备有N (N＞1) 张显卡：
+> 训练脚本均为 PyTorch 原生框架，均支持多卡加速，假设你的设备有 N (N＞1) 张显卡：
 
 单机N卡启动训练方式 (DDP, 支持多机多卡集群)
 
