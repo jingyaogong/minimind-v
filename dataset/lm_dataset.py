@@ -9,8 +9,6 @@ import io
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from model.model_vlm import MiniMindVLM
-import pyarrow as pa
-import pyarrow.parquet as pq
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -47,7 +45,12 @@ def post_processing_chat(prompt_content, empty_think_ratio=0.2):
 class VLMDataset(Dataset):
     def __init__(self, parquet_path, tokenizer, preprocess=None, max_length=512, image_special_token='<|image_pad|>', image_token_len=64):
         super().__init__()
-        self.table = pa.Table.from_batches(pq.ParquetFile(parquet_path).iter_batches())
+        # Use HuggingFace datasets for memory-mapped Arrow access.
+        # This avoids loading the entire parquet file into RAM per DataLoader worker.
+        # With 8 workers and a 4GB parquet, the old approach needed ~32GB RAM;
+        # memory-mapping shares one OS-level page cache across all workers.
+        from datasets import Dataset as HFDataset
+        self.dataset = HFDataset.from_parquet(parquet_path)
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.preprocess = preprocess
@@ -56,7 +59,7 @@ class VLMDataset(Dataset):
         self.eos_id = tokenizer(f'{tokenizer.eos_token}\n', add_special_tokens=False).input_ids
 
     def __len__(self):
-        return len(self.table)
+        return len(self.dataset)
 
     def create_chat_prompt(self, conversations):
         messages = []
@@ -90,8 +93,9 @@ class VLMDataset(Dataset):
         return labels
 
     def __getitem__(self, index: int):
-        conversations = json.loads(self.table['conversations'][index].as_py())
-        image_bytes = self.table['image_bytes'][index].as_py()
+        row = self.dataset[index]
+        conversations = json.loads(row['conversations']) if isinstance(row['conversations'], str) else row['conversations']
+        image_bytes = row['image_bytes']
         if not isinstance(image_bytes, list): image_bytes = [image_bytes]
         
         conversations = pre_processing_chat(conversations)
@@ -106,21 +110,22 @@ class VLMDataset(Dataset):
             image_data = {k: torch.cat([inp[k] for inp in image_inputs_list], dim=0) for k in image_inputs_list[0].keys()}
         else:
             image_data = torch.stack(image_inputs_list)
-        # # === 调试打印 ===
-        # print(f"\n--- Sample {index} ---")
-        # for i, (x, y) in enumerate(zip(input_ids[:-1], labels[1:])):
-        #     print(f"{i:3d}: X={self.tokenizer.decode([x])!r:16s} ---> Y={self.tokenizer.decode([input_ids[i+1]])!r:16s} label={y}")
-        # # ================
 
         return torch.tensor(input_ids, dtype=torch.long), torch.tensor(labels, dtype=torch.long), image_data
+
 
 # 测试parquet数据读取和可视化
 if __name__ == '__main__':
     import matplotlib.pyplot as plt; plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei']
+    from datasets import Dataset as HFDataset
     for path in ['pretrain_i2t.parquet', 'sft_i2t.parquet']:
-        pf = pq.ParquetFile(path); n = pf.num_row_groups; t = pa.concat_tables([pf.read_row_group(i * n // 5).slice(0, 1) for i in range(5)]); fig, ax = plt.subplots(1, 5, figsize=(20, 4))
+        ds = HFDataset.from_parquet(path)
+        fig, ax = plt.subplots(1, 5, figsize=(20, 4))
         for i in range(5):
-            img_data = t['image_bytes'][i].as_py(); img_data = img_data[0] if isinstance(img_data, list) else img_data
+            idx = i * len(ds) // 5
+            img_data = ds[idx]['image_bytes']
+            img_data = img_data[0] if isinstance(img_data, list) else img_data
             ax[i].imshow(Image.open(io.BytesIO(img_data))); ax[i].axis('off')
-            ax[i].set_title(json.loads(t['conversations'][i].as_py())[1]['content'][:30], fontsize=8)
-        out = path.replace('.parquet', '_preview.png'); plt.savefig(out); print(f'已保存{out}, 共{pf.metadata.num_rows}条')
+            conv = json.loads(ds[idx]['conversations']) if isinstance(ds[idx]['conversations'], str) else ds[idx]['conversations']
+            ax[i].set_title(conv[1]['content'][:30], fontsize=8)
+        out = path.replace('.parquet', '_preview.png'); plt.savefig(out); print(f'已保存{out}, 共{len(ds)}条')
