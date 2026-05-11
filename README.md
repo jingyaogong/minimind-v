@@ -227,6 +227,11 @@ print(torch.cuda.is_available())
 
 快速开始时，直接从[数据集链接](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)下载 `sft_i2t.parquet`，并放到 `./dataset` 下即可。
 
+```bash
+# 完整下载
+hf download --repo-type dataset jingyaogong/minimind-v_dataset --local-dir dataset 
+```
+
 <details style="color:rgb(128,128,128)">
 <summary>注：数据集须知</summary>
 
