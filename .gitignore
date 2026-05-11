@@ -1,5 +1,8 @@
 model/__pycache__
+__pycache__
 out
 website/
 docs-minimind-v/
 测试.py
+.venv
+model
