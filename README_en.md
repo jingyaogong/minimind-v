@@ -144,7 +144,7 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 * Ubuntu==20.04
 * CUDA==12.2
 * Python==3.10
-* [requirements.txt](./requirements.txt)
+* [pyproject.toml](./pyproject.toml) (dependencies managed by [uv](https://docs.astral.sh/uv/))
 
 </details>
 
@@ -155,8 +155,8 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 ```bash
 # Clone the repository
 git clone --depth 1 https://github.com/jingyaogong/minimind-v
-# Install dependencies
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+# Install dependencies (using uv)
+uv sync
 ```
 
 ### 2' Download resources
@@ -195,14 +195,14 @@ modelscope download --model gongjy/minimind-3v-pytorch --local_dir ./out
 
 ```bash
 # load_from='model': load native PyTorch weights, load_from='other path': load transformers format
-python eval_vlm.py --load_from model --weight sft_vlm
+uv run python eval_vlm.py --load_from model --weight sft_vlm
 ```
 
 If using a transformers-format model, download the model directory first:
 
 ```bash
 git clone https://huggingface.co/jingyaogong/minimind-3v
-python eval_vlm.py --load_from minimind-3v
+uv run python eval_vlm.py --load_from minimind-3v
 ```
 
 ### 3' Start WebUI (optional)
@@ -210,7 +210,7 @@ python eval_vlm.py --load_from minimind-3v
 ```bash
 # ⚠️ The transformers-format model directory must be copied to ./scripts/ first. web_demo_vlm scans subdirectories under ./scripts/ that contain weight files and reports an error if none are found.
 cp -r minimind-3v ./scripts/minimind-3v
-cd scripts && python web_demo_vlm.py
+cd scripts && uv run python web_demo_vlm.py
 ```
 
 ## Ⅱ 🛠️ Model training
@@ -236,7 +236,7 @@ For a quick start, download `sft_i2t.parquet` from the [dataset link](https://hu
 
 **[Note 1]** The older dataset required extracting 500k fragmented image files, which could be very slow. Since 2025-12-27, the dataset has been unified into Parquet with image and text stored together. It is smaller, requires no decompression, and loads faster.
 
-**[Note 2]** Parquet is a columnar storage format with efficient compression and fast reading. If it is unfamiliar, run `python lm_dataset.py` under `dataset/` to visualize the first 5 image-text pairs.
+**[Note 2]** Parquet is a columnar storage format with efficient compression and fast reading. If it is unfamiliar, run `uv run python lm_dataset.py` under `dataset/` to visualize the first 5 image-text pairs.
 
 Pretrain data (optional; contains caption subset only):
 ```bash
@@ -252,14 +252,14 @@ The single `sft_i2t.parquet` file contains 2.9M rows and absorbs Pretrain as a s
 SFT is the recommended starting point. By default, `--freeze_llm 1` trains `vision_proj` and the first/last LLM layers while keeping the middle layers' original language ability:
 
 ```bash
-python train_sft_vlm.py --epochs 2 --from_weight llm
+uv run python train_sft_vlm.py --epochs 2 --from_weight llm
 ```
 
 If the Projector should be aligned on image-text pairs before SFT, run Pretrain first:
 
 ```bash
-python train_pretrain_vlm.py --epochs 2 --from_weight llm
-python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
+uv run python train_pretrain_vlm.py --epochs 2 --from_weight llm
+uv run python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
 After training, `sft_vlm_*.pth` will be written under `out/` as the SFT weight.
@@ -274,7 +274,7 @@ After training, `sft_vlm_*.pth` will be written under `out/` as the SFT weight.
 
 ```bash
 # To resume training after interruption, use the same command and add --from_resume 1
-python train_sft_vlm.py --epochs 4 --from_resume 1
+uv run python train_sft_vlm.py --epochs 4 --from_resume 1
 ```
 
 **Parameter Description:**
@@ -294,10 +294,10 @@ from [here](https://huggingface.co/jingyaogong/minimind-3v-pytorch).
 
 ```bash
 # Test SFT model (default)
-python eval_vlm.py --weight sft_vlm
+uv run python eval_vlm.py --weight sft_vlm
 
 # Test Pretrain model
-python eval_vlm.py --weight pretrain_vlm
+uv run python eval_vlm.py --weight pretrain_vlm
 ```
 
 ---
@@ -309,7 +309,7 @@ python eval_vlm.py --weight pretrain_vlm
 Single-machine N-card training method (DDP, supports multi-machine multi-card cluster)
 
 ```bash
-torchrun --nproc_per_node N train_xxx.py
+uv run torchrun --nproc_per_node N train_xxx.py
 ```
 
 <details>
@@ -325,9 +325,9 @@ You can enable wandb logging during training:
 
 ```bash
 # You need to log in: wandb login
-torchrun --nproc_per_node N train_xxx.py --use_wandb
+uv run torchrun --nproc_per_node N train_xxx.py --use_wandb
 # and
-python train_xxx.py --use_wandb
+uv run python train_xxx.py --use_wandb
 ```
 
 By adding the `--use_wandb` parameter, you can log the training process, and after training is complete, you can view
