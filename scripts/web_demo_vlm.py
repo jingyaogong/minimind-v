@@ -154,7 +154,7 @@ def launch_gradio_server(server_name="0.0.0.0", server_port=7788):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Chat with MiniMind-V")
     parser.add_argument('--load_from', default='./', type=str, help="transformers模型扫描目录")
-    parser.add_argument('--vision_model', default='../model/siglip2-base-p32-256-ve', type=str, help="视觉编码器路径")
+    parser.add_argument('--vision_model', default='./model/siglip2-base-p32-256-ve', type=str, help="视觉编码器路径")
     parser.add_argument('--temperature', default=0.7, type=float, help="生成温度")
     parser.add_argument('--top_p', default=0.95, type=float, help="nucleus采样阈值")
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str, help="运行设备")

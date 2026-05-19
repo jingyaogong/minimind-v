@@ -142,7 +142,7 @@
 * Ubuntu==20.04
 * CUDA==12.2
 * Python==3.10
-* [requirements.txt](./requirements.txt)
+* [pyproject.toml](./pyproject.toml)（使用 [uv](https://docs.astral.sh/uv/) 管理依赖）
 
 </details>
 
@@ -153,17 +153,17 @@
 ```bash
 # 克隆仓库代码
 git clone --depth 1 https://github.com/jingyaogong/minimind-v
-# 安装必要依赖
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 安装必要依赖（使用 uv）
+uv sync
 ```
 
 ### 2' 下载资源
 
 ```bash
 # 下载 SigLIP2 视觉编码器到 ./model/siglip2-base-p32-256-ve
-modelscope download --model gongjy/siglip2-base-p32-256-ve --local_dir ./model/siglip2-base-p32-256-ve
+uv run modelscope download --model gongjy/siglip2-base-p32-256-ve --local_dir ./model/siglip2-base-p32-256-ve
 # 下载 MiniMind 语言模型权重到 ./out 目录下（作为训练 VLM 的基座语言模型）
-modelscope download --model gongjy/minimind-3v-pytorch llm_768.pth --local_dir ./out
+uv run modelscope download --model gongjy/minimind-3v-pytorch llm_768.pth --local_dir ./out
 ```
 
 注：也可从 [ModelScope Collection](https://modelscope.cn/collections/gongjy/MiniMind-V) 或 [HuggingFace Collection](https://huggingface.co/collections/jingyaogong/minimind-v-67000833fb60b3a2e1f3597d) 选择对应内容 `git clone`（需 LFS）下载，此处不再赘述。
@@ -186,29 +186,27 @@ minimind-v/
 
 ```bash
 # 下载发布权重到 ./out 目录下
-modelscope download --model gongjy/minimind-3v-pytorch --local_dir ./out
+uv run modelscope download --model gongjy/minimind-3v-pytorch --local_dir ./out
 ```
 
 ### 2' 命令行问答
 
 ```bash
 # load_from='model': 加载原生PyTorch权重, load_from='其他路径': 加载transformers格式
-python eval_vlm.py --load_from model --weight sft_vlm
+uv run python eval_vlm.py --load_from model --weight sft_vlm
 ```
 
 如果使用 transformers 格式模型，可先下载模型目录：
 
 ```bash
 git clone https://huggingface.co/jingyaogong/minimind-3v
-python eval_vlm.py --load_from minimind-3v
+uv run python eval_vlm.py --load_from minimind-3v
 ```
 
 ### 3' 启动 WebUI（可选）
 
 ```bash
-# ⚠️ 须先将 transformers 格式模型文件夹复制到 ./scripts/ 目录下，web_demo_vlm 脚本会自动扫描该目录下包含权重文件的子文件夹，如不存在则报错
-cp -r minimind-3v ./scripts/minimind-3v
-cd scripts && python web_demo_vlm.py
+uv run python scripts/web_demo_vlm.py
 ```
 
 ## Ⅱ 🛠️ 模型训练
@@ -229,12 +227,17 @@ print(torch.cuda.is_available())
 
 快速开始时，直接从[数据集链接](https://huggingface.co/datasets/jingyaogong/minimind-v_dataset)下载 `sft_i2t.parquet`，并放到 `./dataset` 下即可。
 
+```bash
+# 完整下载
+hf download --repo-type dataset jingyaogong/minimind-v_dataset --local-dir dataset 
+```
+
 <details style="color:rgb(128,128,128)">
 <summary>注：数据集须知</summary>
 
 【注1】之前需解压50万零碎的图像文件可能非常慢。2025-12-27起，数据集格式统一为 Parquet，图文一体化存储，体积更小，无需解压，加载更快。
 
-【注2】Parquet 是列式存储格式，支持高效压缩和快速读取。如果你对它感到陌生，可以预览数据内容，在 `dataset/` 目录下执行 `python lm_dataset.py` 可视化前5条图文对。
+【注2】Parquet 是列式存储格式，支持高效压缩和快速读取。如果你对它感到陌生，可以预览数据内容，在 `dataset/` 目录下执行 `uv run python lm_dataset.py` 可视化前5条图文对。
 
 Pretrain 数据（可选；仅包含 caption 子集）：
 ```bash
@@ -250,14 +253,14 @@ SFT 单文件 290 万条已把 Pretrain 作为子集合并，经全局 dictionar
 推荐直接执行 SFT。默认 `--freeze_llm 1`，即训练 `vision_proj` 和 LLM 首尾层，保留中间层原有语言能力：
 
 ```bash
-python train_sft_vlm.py --epochs 2 --from_weight llm
+uv run python train_sft_vlm.py --epochs 2 --from_weight llm
 ```
 
 如果希望让 Projector 先完成一轮图文对齐，再进入 SFT，可额外执行 Pretrain：
 
 ```bash
-python train_pretrain_vlm.py --epochs 2 --from_weight llm
-python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
+uv run python train_pretrain_vlm.py --epochs 2 --from_weight llm
+uv run python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 ```
 
 执行完成后，`out/` 下会生成 `sft_vlm_*.pth` 作为 SFT 权重。
@@ -272,7 +275,7 @@ python train_sft_vlm.py --epochs 2 --from_weight pretrain_vlm
 
 ```bash
 # 训练中断后，使用相同命令并添加 --from_resume 1
-python train_sft_vlm.py --epochs 4 --from_resume 1
+uv run python train_sft_vlm.py --epochs 4 --from_resume 1
 ```
 
 **参数说明：**
@@ -291,10 +294,10 @@ python train_sft_vlm.py --epochs 4 --from_resume 1
 
 ```bash
 # 测试SFT模型（默认）
-python eval_vlm.py --weight sft_vlm
+uv run python eval_vlm.py --weight sft_vlm
 
 # 测试Pretrain模型
-python eval_vlm.py --weight pretrain_vlm
+uv run python eval_vlm.py --weight pretrain_vlm
 ```
 
 ---
@@ -305,7 +308,7 @@ python eval_vlm.py --weight pretrain_vlm
 单机N卡启动训练方式 (DDP, 支持多机多卡集群)
 
 ```bash
-torchrun --nproc_per_node N train_xxx.py
+uv run torchrun --nproc_per_node N train_xxx.py
 ```
 
 <details>
@@ -323,9 +326,9 @@ deepspeed --master_port 29500 --num_gpus=N train_xxx.py
 
 ```bash
 # 需要登录: wandb login
-torchrun --nproc_per_node N train_xxx.py --use_wandb
+uv run torchrun --nproc_per_node N train_xxx.py --use_wandb
 # and
-python train_xxx.py --use_wandb
+uv run python train_xxx.py --use_wandb
 ```
 
 通过添加`--use_wandb`参数，可以记录训练过程，训练完成后，可以在wandb网站上查看训练过程。通过修改`wandb_project`
