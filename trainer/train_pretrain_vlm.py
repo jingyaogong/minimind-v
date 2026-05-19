@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import argparse
 import time
 import warnings
+import datasets
 import torch
 import torch.distributed as dist
 from contextlib import nullcontext
