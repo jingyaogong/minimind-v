@@ -3,3 +3,22 @@ out
 website/
 docs-minimind-v/
 测试.py
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Large model weights and pretrained models
+MiniMind2-V/
+llm_512.pth
+model/vision_model/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Claude config
+.claude/
+
+# Large dataset files
+dataset/sft_vlm.parquet
