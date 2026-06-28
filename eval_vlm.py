@@ -25,7 +25,9 @@ def init_model(args):
         model = AutoModelForCausalLM.from_pretrained(args.load_from, trust_remote_code=True)
         model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("./model/siglip2-base-p32-256-ve")
     get_model_params(model, model.config)
-    return model.half().eval().to(args.device), tokenizer, model.processor
+    model = model.eval()
+    if "cuda" in args.device: model = model.half()
+    return model.to(args.device), tokenizer, model.processor
 
 
 def main():

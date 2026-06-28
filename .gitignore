@@ -1,4 +1,7 @@
 model/__pycache__
+__pycache__/
+*.py[cod]
+.DS_Store
 out
 website/
 docs-minimind-v/

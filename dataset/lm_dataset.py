@@ -9,6 +9,7 @@ import io
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from model.model_vlm import MiniMindVLM
+from datasets import Dataset as HFDataset
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -47,7 +48,7 @@ def post_processing_chat(prompt_content, empty_think_ratio=0.2):
 class VLMDataset(Dataset):
     def __init__(self, parquet_path, tokenizer, preprocess=None, max_length=512, image_special_token='<|image_pad|>', image_token_len=64):
         super().__init__()
-        self.table = pa.Table.from_batches(pq.ParquetFile(parquet_path).iter_batches())
+        self.dataset = HFDataset.from_parquet(parquet_path)
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.preprocess = preprocess
@@ -56,7 +57,7 @@ class VLMDataset(Dataset):
         self.eos_id = tokenizer(f'{tokenizer.eos_token}\n', add_special_tokens=False).input_ids
 
     def __len__(self):
-        return len(self.table)
+        return len(self.dataset)
 
     def create_chat_prompt(self, conversations):
         messages = []
@@ -90,8 +91,9 @@ class VLMDataset(Dataset):
         return labels
 
     def __getitem__(self, index: int):
-        conversations = json.loads(self.table['conversations'][index].as_py())
-        image_bytes = self.table['image_bytes'][index].as_py()
+        row = self.dataset[index]
+        conversations = json.loads(row['conversations']) if isinstance(row['conversations'], str) else row['conversations']
+        image_bytes = row['image_bytes']
         if not isinstance(image_bytes, list): image_bytes = [image_bytes]
         
         conversations = pre_processing_chat(conversations)

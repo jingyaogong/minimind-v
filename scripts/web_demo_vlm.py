@@ -43,7 +43,9 @@ def load_vlm_model(model_path):
         if model.vision_encoder is None: raise FileNotFoundError(f"视觉编码器未找到: {vision_model_path}")
         preprocess = model.processor
         lm_config = model.config
-        model = model.half().eval().to(device)
+        model = model.eval()
+        if "cuda" in device: model = model.half()
+        model = model.to(device)
         model.vision_encoder = model.vision_encoder.to(device)
         current_model_name = os.path.basename(model_path)
         param_str = f'{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M'
@@ -76,13 +78,14 @@ def chat(prompt, current_image_path=None):
         messages,
         tokenize=False,
         add_generation_prompt=True
-    )[-max_seq_len + 1:]
+    )
 
     with torch.no_grad():
         inputs = tokenizer(
             new_prompt,
             return_tensors="pt",
-            truncation=True
+            truncation=True,
+            max_length=max_seq_len
         ).to(device)
         queue = Queue()
         streamer = CustomStreamer(tokenizer, queue)
