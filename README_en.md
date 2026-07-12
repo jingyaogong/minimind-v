@@ -86,7 +86,7 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 
 </details>
 
-<details> 
+<details>
 <summary> <b>2026-04-01</b> </summary>
 
 - Added minimind-3v (67M) and minimind-3v-moe (201M-A67M) models
@@ -99,7 +99,7 @@ Is the training process difficult? Now, let's explore the answers and feel the j
 
 </details>
 
-<details> 
+<details>
 <summary> <b>2025-10-24</b> </summary>
 
 - Bug fix: model weights mismatch
@@ -357,21 +357,21 @@ Let's take a moment to think about two questions:
 * What is a **Large Language Model (LLM)**?
 * What is a multimodal model?
 
-[This article](https://www.jiqizhixin.com/articles/2024-09-15-3) perfectly aligns with my thoughts:  
+[This article](https://www.jiqizhixin.com/articles/2024-09-15-3) perfectly aligns with my thoughts:
 Although the name "large language model" (LLM) contains the word "language," they are actually not closely related to
 language; this is just a historical issue. A more accurate name would be self-regressive Transformer or something else.
 LLMs are more of a general statistical modeling technology, mainly using a self-regressive Transformer to simulate token
-flows. These tokens can represent text, images, audio, action choices, and even molecules—anything, really.  
+flows. These tokens can represent text, images, audio, action choices, and even molecules—anything, really.
 Therefore, as long as the problem can be converted into a process of simulating a series of discrete tokens, LLM can
 theoretically solve it. In fact, with the increasing maturity of large language model technologies, we may see more and
 more problems falling under this modeling paradigm. In other words, the problem is fixed in using LLM to "predict the
 next token," but the role and meaning of the tokens differ in each domain.
 
-[ZJU-LiXi](https://person.zju.edu.cn/xilics#694283) has also mentioned a similar viewpoint (roughly stated below):  
+[ZJU-LiXi](https://person.zju.edu.cn/xilics#694283) has also mentioned a similar viewpoint (roughly stated below):
 Text, video, audio, actions, etc., are considered "multimodal" signals in human perception, but the term "modality" is
 essentially just a classification concept based on how humans store information. Just like `.txt` and `.png` files,
 though they differ in visual presentation and higher-level forms, they are fundamentally the same. The concept of "
-multimodal" arose simply because humans need to categorize these signals based on different sensory dimensions.  
+multimodal" arose simply because humans need to categorize these signals based on different sensory dimensions.
 However, for machines, regardless of the signal's "modality," they are ultimately presented as a sequence of binary "
 monomodal" numbers. Machines do not differentiate the origin of these signals; they just process and analyze the
 information contained within these sequences.
@@ -398,15 +398,15 @@ outputs the end token; here, the "token" doesn’t necessarily have to be text!
 2. Fine-tune the LLM so that it and the **"foreign language dictionary"** go through a period of adaptation, thereby
    better understanding images.
 
-The "foreign language dictionary" is referred to as the Visual Encoder model.  
+The "foreign language dictionary" is referred to as the Visual Encoder model.
 Like LlaVA, Qwen-VL, and other visual language models, MiniMind-V now uses the open-source SigLIP2 series models as the
-Visual Encoder.  
+Visual Encoder.
 Specifically, we use [siglip2-base-p32-256-ve](https://huggingface.co/jingyaogong/siglip2-base-p32-256-ve), a Visual
-Encoder based on the ViT-B/32 architecture for describing image-text information.  
+Encoder based on the ViT-B/32 architecture for describing image-text information.
 The current SigLIP2 NaFlex vision encoder generates 64 patch tokens (256×256 image / patch_size 32 = 8×8 = 64) from the processor output as the input to the
-encoder layer, which produces a 1×768 dimensional embedding vector for calculating error with the text.  
+encoder layer, which produces a 1×768 dimensional embedding vector for calculating error with the text.
 We don't need the final embedding representation, so we only take the output from the encoder layer, which is the output
-feature from the core ViT backbone.  
+feature from the core ViT backbone.
 It receives 64×768 features from the previous layer, which are projected to the LLM's hidden dimension via LayerNorm + a 2-layer MLP (Linear→GELU→Linear), resulting in 64 visual tokens fed into MiniMind-V — this step is exactly cross-modal feature alignment: the native visual features are brought into the semantic space where text tokens live, so that the two can interact in the same space.
 
 [LlaVA-1](https://arxiv.org/pdf/2304.08485) achieves good alignment with a simple linear transformation, [LlaVA-1.5](https://arxiv.org/pdf/2310.03744) upgrades to a 2-layer MLP. MiniMind-V adopts the same MLP Projection approach as LlaVA-1.5 (P32 natively outputs 64 tokens, no additional reshape compression needed).
@@ -422,16 +422,16 @@ With that, the internal structural changes of MiniMind-V are now fully presented
 
 Next, let's briefly discuss the changes in the external input and output of MiniMind-V.
 
-The input to the VLM is still a segment of text containing special `<image>` placeholders.  
+The input to the VLM is still a segment of text containing special `<image>` placeholders.
 After computing the text embedding, the vector generated by the image encoder can be projected onto the corresponding
-embedding part of the placeholder, replacing the original placeholder embedding.  
+embedding part of the placeholder, replacing the original placeholder embedding.
 For example:
 
 ```text
 <image>\nWhat is in this image?
 ```
 
-In `minimind-v`, the image is replaced by 64 `<|image_pad|>` tokens as placeholder (SigLIP2 P32 directly outputs 64 patch tokens, projected to 64 visual tokens via MLP),  
+In `minimind-v`, the image is replaced by 64 `<|image_pad|>` tokens as placeholder (SigLIP2 P32 directly outputs 64 patch tokens, projected to 64 visual tokens via MLP),
 thus the `minimind-v` prompt becomes:
 
 ```text
@@ -525,10 +525,10 @@ We therefore use `--freeze_llm 1`: **only the Projection and the first & last LL
 
 On a single NVIDIA 3090, SFT takes ~2 hours per `epoch` in practice; dense and MoE finish in similar time (activated parameters are on the same order, with the gap mostly coming from the extra memory traffic of expert routing). Pretrain data volume is ~45% of SFT's, so one Pretrain epoch can be roughly scaled by that ratio. At a typical cloud price of ~1.5 RMB/hour for a 3090, a full SFT round costs about 3 RMB.
 
-Pretrain [768+8] (dense & moe)  
+Pretrain [768+8] (dense & moe)
 ![input](./images/pretrain_loss.jpg)
 
-SFT [768+8] (dense & moe)  
+SFT [768+8] (dense & moe)
 ![input](./images/sft_loss.jpg)
 
 ## Ⅲ Model Weights
@@ -637,9 +637,9 @@ Visual signals act as a special "foreign language" to the LLM, so the ceiling of
 
 ## 😊 Acknowledgments
 
-<a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>: <a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">Multi-image VLM branch</a> | <a href="https://github.com/jingyaogong/minimind-v/tree/32cf4c5c01337231fd907b92d513de8945594263">Repository provided up to this version</a> 
+<a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>: <a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">Multi-image VLM branch</a> | <a href="https://github.com/jingyaogong/minimind-v/tree/32cf4c5c01337231fd907b92d513de8945594263">Repository provided up to this version</a>
 
-<details> 
+<details>
 <summary> <b>Reference Links & Thanks to the following excellent papers or projects</b> </summary>
 
 - No particular order

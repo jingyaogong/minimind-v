@@ -84,7 +84,7 @@
 
 </details>
 
-<details> 
+<details>
 <summary> <b>2026-04-01</b> </summary>
 
 - 新增 minimind-3v (67M) 和 minimind-3v-moe (201M-A67M) 模型
@@ -97,7 +97,7 @@
 
 </details>
 
-<details> 
+<details>
 <summary> <b>2025-10-24</b> </summary>
 
 - bug修复：模型权重不对应
@@ -623,9 +623,9 @@ MoE 版本的场景描述更丰富，对背景环境（城市街道、城市天�
 
 ## 😊鸣谢
 
-<a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>: <a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">多图vlm分支</a> | <a href="https://github.com/jingyaogong/minimind-v/tree/32cf4c5c01337231fd907b92d513de8945594263">仓库截至此版本提供</a> 
+<a href="https://github.com/xinyanghuang7"><b>@xinyanghuang7</b></a>: <a href="https://github.com/xinyanghuang7/minimind-v/tree/hxy">多图vlm分支</a> | <a href="https://github.com/jingyaogong/minimind-v/tree/32cf4c5c01337231fd907b92d513de8945594263">仓库截至此版本提供</a>
 
-<details> 
+<details>
 <summary> <b>参考链接 & 感谢以下优秀的论文或项目</b> </summary>
 
 - 排名不分任何先后顺序
