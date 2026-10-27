@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 
 def init_model(args):
     tokenizer = AutoTokenizer.from_pretrained(args.load_from, trust_remote_code=True)
-    if 'model' in args.load_from:
+    if os.path.basename(os.path.normpath(args.load_from)) == 'model':
         moe_suffix = '_moe' if args.use_moe else ''
         ckp = f'./{args.save_dir}/{args.weight}_{args.hidden_size}{moe_suffix}.pth'
         model = MiniMindVLM(
