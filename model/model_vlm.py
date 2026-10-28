@@ -66,10 +66,12 @@ class MiniMindVLM(MiniMindForCausalLM):
 
     @staticmethod
     def get_image_embeddings(image_inputs, vision_model):
-        if hasattr(image_inputs, 'keys'):
-            image_inputs = {k: v.squeeze(1) if v.ndim > 2 and v.shape[1] == 1 else v for k, v in image_inputs.items()}
         with torch.no_grad():
-            outputs = vision_model(**image_inputs)
+            if hasattr(image_inputs, 'keys'):
+                image_inputs = {k: v.squeeze(1) if v.ndim > 2 and v.shape[1] == 1 else v for k, v in image_inputs.items()}
+                outputs = vision_model(**image_inputs)
+            else:
+                outputs = vision_model(pixel_values=image_inputs)
         return outputs.last_hidden_state
 
     @torch.compiler.disable
